@@ -394,6 +394,34 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
 .ev-bad{--evc:var(--red);--evbg:#2A0611}
 .ev-choice{--evc:var(--yellow);--evbg:#2A2000}
 
+/* ── save / load ── */
+.slots{display:flex;flex-direction:column;gap:8px}
+.slot{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;
+  background:#0A1228;border:1px solid var(--line);border-radius:2px;padding:10px 13px}
+@media(max-width:640px){.slot{grid-template-columns:1fr;gap:8px}.slot .sl-acts{justify-content:flex-start}}
+.slot.on{border-color:var(--line2)}
+.sl-name{font-family:var(--disp);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.sl-meta{min-width:0}
+.sl-meta b{font-size:14px}
+.sl-sub{display:block;font-family:var(--mono);font-size:11px;color:var(--ink2);margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.sl-when{display:block;font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:2px}
+.sl-empty{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.sl-acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.sl-io label.lbl{display:block;margin-bottom:6px}
+.codebox{width:100%;background:#070C1C;border:1px solid var(--line);border-radius:2px;color:var(--ink2);
+  font-family:var(--mono);font-size:10.5px;line-height:1.45;padding:9px 11px;resize:vertical;
+  word-break:break-all}
+.codebox:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+.codebox:disabled{opacity:.4}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);z-index:80;
+  background:var(--navy3);border:1px solid var(--green);color:var(--ink);
+  font-size:13.5px;padding:10px 18px;border-radius:3px;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{border-color:var(--red)}
+
 /* ── manual ── */
 .manual{position:fixed;inset:0;background:#040814F2;backdrop-filter:blur(3px);z-index:50;
   overflow-y:auto;padding:26px 18px 60px}
@@ -432,6 +460,7 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
       <button data-lang="en">English</button>
     </div>
     <div class="spacer"></div>
+    <button class="b" id="openSave">💾 저장 / Save</button>
     <button class="b" id="openManual">📖 설명서 / Manual</button>
   </div>
 
@@ -498,6 +527,13 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
   </div>
 </section>
 </div>
+
+<div class="manual hide" id="savebox"><div class="mbox">
+  <div class="mh"><h2 id="saveHd">저장</h2><button class="close" id="closeSave">닫기</button></div>
+  <div class="mb" id="saveBody"></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
 
 <div class="manual hide" id="manual"><div class="mbox">
   <div class="mh"><h2 id="manHd">설명서</h2><button class="close" id="closeManual">닫기 / Close</button></div>
@@ -746,6 +782,8 @@ let LANG="both";
 const B=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2">${en}</span>`;
 const Bi=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2 i">${en}</span>`;
 const Bp=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko} · ${en}`;
+/* 브라우저 confirm 창용 — 줄바꿈으로 분리한다 */
+const Bd=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:ko+"\n\n— — —\n\n"+en;
 const P=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2">${en}</span>`;
 const M=n=>(n<0?"−$":"$")+Math.abs(n).toFixed(1)+"M";
 const $=id=>document.getElementById(id);
@@ -1056,7 +1094,7 @@ function settleRace(){
   S.rivals.forEach(r=>r.cp+=rivalGrowth(r.tier)+Math.random()*0.20);
   S.lastBest=best<99?best:20;
 
-  const res={round:S.round+1,circuit:CIRCUITS[S.round].n,order,mine,best,nDnf,
+  const res={round:S.round+1,circuit:CIRCUITS[S.round].n,order,best,nDnf,
     prizeG,equityCut,sponsorRev,merch,ie,fixBase,fixSal,varTyre,varRepair,varPractice,
     interest,dev,mk,bGain,posBonus,revenue,costs,net:revenue-costs-dev,
     sponsorId:sp.id,hitBonus:hit,stratId:st.id,gained:mine.reduce((x,c)=>x+c.pt,0),
@@ -2018,6 +2056,21 @@ function renderManual(){
         "If net worth is negative at season end the team folds and <b>the career is over.</b> No amount of results saves it - the hardest rule in the game."])}
      </div>`)+
 
+   sec("저장하기","Saving your game",`<p>${bi([
+     "위쪽 <b>💾 저장</b> 버튼을 누르면 저장 창이 열린다.",
+     "The <b>💾 Save</b> button at the top opens the save window."])}</p>
+     <div class="mgrid">
+     ${item(["자동 저장","Autosave"],Bp("매 라운드 자동","every round"),
+       ["아무것도 안 해도 매 라운드 자동으로 저장된다. 창을 닫았다가 다시 열면 이어서 시작한다.",
+        "The game saves itself every round. Close the tab and reopen it to carry on where you left off."])}
+     ${item(["슬롯 3개","Three slots"],Bp("원하는 시점 보관","keep any moment"),
+       ["중요한 순간(대출 직전, 드라이버 영입 직전 등)을 따로 저장해 두고 언제든 되돌아올 수 있다. 다른 전략을 시험해 보기 좋다.",
+        "Store key moments - just before a loan, before signing a driver - and come back to them. Handy for testing a different strategy."])}
+     ${item(["다른 기기로 옮기기","Move devices"],Bp("코드 복사 또는 파일","code or file"),
+       ["브라우저 저장은 <b>그 기기에만</b> 남는다. 폰에서 하던 커리어를 노트북에서 이어가려면 <b>코드를 복사</b>하거나 <b>파일로 저장</b>해서 옮긴 뒤 붙여넣으면 된다.",
+        "Browser saves live <b>only on that device</b>. To continue a phone career on a laptop, <b>copy the code</b> or <b>save it as a file</b>, then paste or load it on the other device."])}
+     </div>`)+
+
    sec("점수 체계","Scoring",`<p>${bi([
      "실제 F1 규정과 같다. 1위부터 <b>25 · 18 · 15 · 12 · 10 · 8 · 6 · 4 · 2 · 1</b>점, 10위까지. 패스티스트랩을 기록하고 10위 안에 들면 <b>+1점</b>. 컨스트럭터 점수는 두 드라이버의 합계다.",
      "Same as real F1: <b>25, 18, 15, 12, 10, 8, 6, 4, 2, 1</b> points for the top ten. The fastest lap adds <b>+1</b> if that driver finishes in the top ten. Constructors' points are the sum of both drivers."])}</p>`)+
@@ -2027,6 +2080,173 @@ function renderManual(){
        `<div class="mitem"><div class="mt">${LANG==="en"?c.k[1]:c.k[0]}</div>
         <div class="mv">${LANG==="ko"?c.k[1]:""}</div>
         <div class="md">${bi(c.b)}</div></div>`).join("")}</div>`);
+}
+</script>
+<script>
+/* ═════════ 저장 · 불러오기 ═════════ */
+const SLOTS=[1,2,3];
+const slotKey=n=>"pitwallgp.slot"+n;
+
+function readSlot(n){
+  try{const r=localStorage.getItem(slotKey(n));return r?JSON.parse(r):null;}catch(e){return null;}
+}
+function slotInfo(raw){
+  if(!raw||!raw.state||!TEAMS[raw.state.tk])return null;
+  const st=raw.state, T=TEAMS[st.tk];
+  const a=st.rivals?st.rivals.map(r=>({p:r.pts,me:0})):[];
+  a.push({p:st.points,me:1}); a.sort((x,y)=>y.p-x.p||(x.me?-1:1));
+  return{name:st.name,team:T.n,col:T.col,season:st.season||1,round:Math.min((st.round||0)+1,ROUNDS),
+    pos:a.findIndex(t=>t.me)+1,pts:st.points,cash:st.cash,debt:st.debt,
+    seasons:(st.career&&st.career.seasons.length)||0,titles:(st.career&&st.career.titles)||0,
+    when:raw.when||""};
+}
+function stamp(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function saveToSlot(n){
+  if(!S)return false;
+  try{localStorage.setItem(slotKey(n),JSON.stringify({v:3,when:stamp(),state:S}));return true;}
+  catch(e){return false;}
+}
+function deleteSlot(n){try{localStorage.removeItem(slotKey(n));}catch(e){}}
+
+/* 저장본을 현재 게임으로 적용 (구버전 보정 포함) */
+function adoptState(st){
+  if(!st||!st.tk||!TEAMS[st.tk]||st.round===undefined)return false;
+  S=st; picked=st.tk; RACE=null;
+  if(S.phase==="race"){S.phase="quali";S.grid=null;}
+  if(S.phase==="quali"&&!S.grid)S.practiceDone=true;
+  if(S.practiceDone===undefined)S.practiceDone=(S.phase!=="practice");
+  if(S.season===undefined)S.season=1;
+  if(!S.career)S.career={seasons:[],titles:0,targetsMet:0,netStart:S.cash};
+  if(!S.pendingTransfers)S.pendingTransfers=[];
+  if(!S.mod)S.mod=blankMod();
+  if(S.prizeCut===undefined)S.prizeCut=0;
+  if(!S.ledger)return false;
+  ["transferIn","transferOut","transferGain","seasonPrize","evCash","evCost"]
+    .forEach(k=>{if(S.ledger[k]===undefined)S.ledger[k]=0;});
+  if(S.rivals)S.rivals.forEach(r=>{if(r.baseCp===undefined)r.baseCp=r.cp;});
+  if(S.over&&S.phase!=="result")S.phase="finish";
+  $("select").classList.add("hide"); $("game").classList.remove("hide");
+  save(); renderGame();
+  return true;
+}
+function loadFromSlot(n){
+  const raw=readSlot(n);
+  if(!raw||!adoptState(raw.state)){toast(Bp("불러올 수 없는 저장본이다.","That save could not be loaded."),true);return;}
+  closeSave(); toast(Bp("슬롯 "+n+" 불러왔다.","Loaded slot "+n+"."));
+}
+
+/* ── 내보내기 / 가져오기 ── */
+/* 내보내기용 축약 — 화면 재현에 필요한 필드만 남긴다 */
+function slimState(){
+  const c=JSON.parse(JSON.stringify(S));
+  if(c.lastResult&&c.lastResult.order){
+    c.lastResult.order=c.lastResult.order.map(x=>({
+      name:x.name,col:x.col,me:x.me,pos:x.pos,pt:x.pt,out:x.out,
+      reason:x.reason,time:+(x.time||0).toFixed(2)}));
+  }
+  c.grid=null;
+  return c;
+}
+function exportCode(){
+  if(!S)return "";
+  const json=JSON.stringify({v:3,when:stamp(),state:slimState()});
+  try{return btoa(unescape(encodeURIComponent(json)));}catch(e){return "";}
+}
+function importCode(code){
+  try{
+    const json=decodeURIComponent(escape(atob(code.trim())));
+    const raw=JSON.parse(json);
+    return adoptState(raw.state||raw);
+  }catch(e){return false;}
+}
+function downloadSave(){
+  const code=exportCode(); if(!code)return;
+  const blob=new Blob([code],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=`pitwall-${S.name.replace(/\s+/g,"-")}-S${S.season}R${S.round+1}.txt`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ── 토스트 ── */
+let toastTimer=null;
+function toast(msg,bad){
+  const el=$("toast"); el.innerHTML=msg;
+  el.className="toast show"+(bad?" bad":"");
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className="toast";},2600);
+}
+
+/* ── 모달 ── */
+function openSave(){renderSave();$("savebox").classList.remove("hide");document.body.style.overflow="hidden";}
+function closeSave(){$("savebox").classList.add("hide");document.body.style.overflow="";}
+
+function renderSave(){
+  const inGame=!!S;
+  $("saveHd").innerHTML=Bp("저장 · 불러오기","Save & Load");
+  $("closeSave").innerHTML=Bp("닫기","Close");
+
+  const auto=(()=>{try{const r=localStorage.getItem(KEY);return r?{state:JSON.parse(r),when:Bp("계속 갱신됨","continuously updated")}:null;}catch(e){return null;}})();
+  const autoI=auto?slotInfo(auto):null;
+
+  const row=(label,info,n)=>{
+    const filled=!!info;
+    const meta=filled
+      ? `<div class="sl-meta">
+           <span class="lv" style="background:${info.col}"></span><b>${info.name}</b>
+           <span class="sl-sub">${Bp("시즌","S")}${info.season} · R${info.round} · P${info.pos} · ${info.pts}pts · ${M(info.cash)}${info.debt>0?" / "+Bp("부채","debt")+" "+M(info.debt):""}</span>
+           <span class="sl-when">${info.when}${info.seasons?` · ${Bp("완주 시즌","seasons")} ${info.seasons}${info.titles?" · 🏆"+info.titles:""}`:""}</span>
+         </div>`
+      : `<div class="sl-meta"><span class="sl-empty">${Bp("비어 있음","Empty")}</span></div>`;
+    const acts=n===0
+      ? `<button class="b" data-sl="load" data-n="0" ${filled?"":"disabled"}>${Bp("불러오기","Load")}</button>`
+      : `<button class="b" data-sl="save" data-n="${n}" ${inGame?"":"disabled"}>${Bp("저장","Save")}</button>
+         <button class="b" data-sl="load" data-n="${n}" ${filled?"":"disabled"}>${Bp("불러오기","Load")}</button>
+         <button class="b" data-sl="del" data-n="${n}" ${filled?"":"disabled"}>${Bp("삭제","Delete")}</button>`;
+    return `<div class="slot ${filled?"on":""}">
+      <div class="sl-name">${label}</div>${meta}<div class="sl-acts">${acts}</div></div>`;
+  };
+
+  $("saveBody").innerHTML=`
+   <div class="msec">
+     <h3>${Bp("이 브라우저에 저장","Saved in this browser")}</h3>
+     <p style="margin-bottom:11px">${Bp(
+       "슬롯 3개에 원하는 시점을 저장해 두고 언제든 되돌아올 수 있다. <b>자동 저장</b>은 매 라운드 알아서 갱신된다.",
+       "Keep up to three snapshots and return to any of them. The <b>autosave</b> updates itself every round.")}</p>
+     <div class="slots">
+       ${row(Bp("자동 저장","Autosave"),autoI,0)}
+       ${SLOTS.map(n=>row(Bp("슬롯 "+n,"Slot "+n),slotInfo(readSlot(n)),n)).join("")}
+     </div>
+   </div>
+
+   <div class="msec">
+     <h3>${Bp("다른 기기로 옮기기","Move to another device")}</h3>
+     <p style="margin-bottom:11px">${Bp(
+       "브라우저 저장은 <b>그 기기에만</b> 남는다. 폰에서 하던 걸 노트북에서 이어가려면 아래 코드를 복사해서 옮기면 된다.",
+       "Browser saves live <b>only on that device</b>. To continue a phone career on a laptop, copy the code below and paste it there.")}</p>
+     <div class="sl-io">
+       <label class="lbl">${Bp("내보내기 — 이 코드를 복사해 두자","Export - copy this code")}</label>
+       <textarea id="expBox" class="codebox" readonly rows="3" ${inGame?"":"disabled"}>${inGame?exportCode():""}</textarea>
+       <div class="sl-acts" style="margin-top:7px">
+         <button class="b" id="btnCopy" ${inGame?"":"disabled"}>${Bp("코드 복사","Copy code")}</button>
+         <button class="b" id="btnDl" ${inGame?"":"disabled"}>${Bp("파일로 저장","Save as file")}</button>
+       </div>
+     </div>
+     <div class="sl-io" style="margin-top:13px">
+       <label class="lbl">${Bp("가져오기 — 코드를 붙여넣거나 파일을 고르자","Import - paste a code or pick a file")}</label>
+       <textarea id="impBox" class="codebox" rows="3" placeholder="${Bp("여기에 코드를 붙여넣기","Paste your code here")}"></textarea>
+       <div class="sl-acts" style="margin-top:7px">
+         <button class="b" id="btnImp">${Bp("코드로 불러오기","Load from code")}</button>
+         <label class="b" style="cursor:pointer">${Bp("파일 선택","Choose file")}
+           <input type="file" id="impFile" accept=".txt,text/plain" style="display:none"></label>
+       </div>
+     </div>
+   </div>`;
 }
 </script>
 <script>
@@ -2058,9 +2278,55 @@ document.addEventListener("click",e=>{
   if(lb){LANG=lb.dataset.lang;
     document.querySelectorAll("#langseg button").forEach(b=>b.classList.toggle("on",b===lb));
     if(!$("manual").classList.contains("hide"))renderManual();
+    if(!$("savebox").classList.contains("hide"))renderSave();
     rerender(); return;}
 
   // 설명서
+  if(t.closest("#openSave")){openSave();return;}
+  if(t.closest("#closeSave")){closeSave();return;}
+  const sl=t.closest("[data-sl]");
+  if(sl&&!sl.disabled){
+    const act=sl.dataset.sl, n=+sl.dataset.n;
+    const briefKo=x=>`${x.name} · 시즌 ${x.season} R${x.round} · P${x.pos} · ${x.pts}pts · ${M(x.cash)}`;
+    const briefEn=x=>`${x.name} · Season ${x.season} R${x.round} · P${x.pos} · ${x.pts}pts · ${M(x.cash)}`;
+    if(act==="save"){
+      const ex=slotInfo(readSlot(n));
+      if(ex&&!confirm(Bd(
+        `슬롯 ${n}에 이미 저장본이 있다.\n\n${briefKo(ex)}\n\n덮어쓸까?`,
+        `Slot ${n} already holds a save.\n\n${briefEn(ex)}\n\nOverwrite it?`)))return;
+      saveToSlot(n)?toast(Bp("슬롯 "+n+"에 저장했다.","Saved to slot "+n+".")):toast(Bp("저장 공간이 부족하다.","Storage is full."),true);
+      renderSave(); }
+    else if(act==="load"){
+      if(S&&!confirm(Bd(
+        `지금 진행 중인 게임을 덮어쓴다.\n\n저장하지 않은 진행은 사라진다. 계속할까?`,
+        `This replaces your current game.\n\nUnsaved progress will be lost. Continue?`)))return;
+      if(n===0){ const r=(()=>{try{const x=localStorage.getItem(KEY);return x?JSON.parse(x):null;}catch(e){return null;}})();
+        if(r&&adoptState(r)){closeSave();toast(Bp("자동 저장을 불러왔다.","Autosave loaded."));}
+        else toast(Bp("불러올 수 없다.","Could not load."),true); }
+      else loadFromSlot(n);
+    }
+    else if(act==="del"){
+      const ex=slotInfo(readSlot(n));
+      if(ex&&!confirm(Bd(
+        `슬롯 ${n}을 삭제할까?\n\n${briefKo(ex)}\n\n되돌릴 수 없다.`,
+        `Delete slot ${n}?\n\n${briefEn(ex)}\n\nThis cannot be undone.`)))return;
+      deleteSlot(n); renderSave(); toast(Bp("슬롯 "+n+" 삭제했다.","Slot "+n+" deleted.")); }
+    return;}
+  if(t.closest("#btnCopy")){
+    const box=$("expBox"); box.select(); box.setSelectionRange(0,999999);
+    const done=()=>toast(Bp("코드를 복사했다.","Code copied."));
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(box.value).then(done,()=>{try{document.execCommand("copy");done();}catch(e){toast(Bp("직접 선택해서 복사해야 한다.","Select the text and copy manually."),true);}});
+    }else{try{document.execCommand("copy");done();}catch(e){toast(Bp("직접 선택해서 복사해야 한다.","Select the text and copy manually."),true);}}
+    return;}
+  if(t.closest("#btnDl")){downloadSave();toast(Bp("파일로 저장했다.","Save file downloaded."));return;}
+  if(t.closest("#btnImp")){
+    const v=$("impBox").value.trim();
+    if(!v){toast(Bp("코드를 붙여넣어야 한다.","Paste a code first."),true);return;}
+    if(importCode(v)){closeSave();toast(Bp("코드에서 불러왔다.","Loaded from code."));}
+    else toast(Bp("코드를 읽을 수 없다. 전체를 정확히 붙여넣었는지 확인하자.","Could not read that code - make sure you pasted all of it."),true);
+    return;}
+
   if(t.closest("#openManual")){renderManual();$("manual").classList.remove("hide");document.body.style.overflow="hidden";return;}
   if(t.closest("#closeManual")){$("manual").classList.add("hide");document.body.style.overflow="";return;}
 
@@ -2196,6 +2462,16 @@ document.addEventListener("click",e=>{
   if(t.closest("#nextSeason")){
     nextSeason(); rollEvent(); renderGame(); window.scrollTo({top:0,behavior:"smooth"}); return;}
   if(t.closest("#again")||t.closest("#reset"))restart();
+});
+
+document.addEventListener("change",e=>{
+  if(e.target&&e.target.id==="impFile"){
+    const f=e.target.files&&e.target.files[0]; if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{ if(importCode(String(rd.result))){closeSave();toast(Bp("파일에서 불러왔다.","Loaded from file."));}
+                    else toast(Bp("파일을 읽을 수 없다.","Could not read that file."),true); };
+    rd.readAsText(f);
+  }
 });
 
 function restart(){
