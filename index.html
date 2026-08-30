@@ -375,6 +375,25 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
   .opt .t .pay{margin-left:0;flex-basis:100%}
 }
 
+/* ── event card ── */
+.evcard{border:1px solid var(--evc);border-radius:3px;margin-bottom:14px;overflow:hidden;
+  background:linear-gradient(135deg,var(--evbg),#0B1329 62%)}
+.evcard .eh{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--evc)}
+.evcard .eicon{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:var(--evc);color:#08101F;font-weight:800;font-size:14px;font-family:var(--disp)}
+.evcard .et{font-family:var(--disp);font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;line-height:1.05}
+.evcard .ek{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--evc)}
+.evcard .eb{padding:12px 14px}
+.evcard .ed{font-size:13.5px;color:var(--ink2);line-height:1.55;margin:0}
+.evcard .ed b{color:var(--ink)}
+.evcard .eff{display:inline-block;margin-top:9px;font-family:var(--mono);font-size:11.5px;
+  padding:4px 9px;border:1px solid var(--evc);border-radius:2px;color:var(--evc)}
+.evcard .eopts{display:flex;flex-direction:column;gap:8px;margin-top:11px}
+.ev-good{--evc:var(--green);--evbg:#06301F}
+.ev-bad{--evc:var(--red);--evbg:#2A0611}
+.ev-choice{--evc:var(--yellow);--evbg:#2A2000}
+
 /* ── manual ── */
 .manual{position:fixed;inset:0;background:#040814F2;backdrop-filter:blur(3px);z-index:50;
   overflow-y:auto;padding:26px 18px 60px}
@@ -579,6 +598,104 @@ const ACADEMY_POOL=[
  {n:"E. Kaminski",s:46,c:.40,sal:0.25,age:19},{n:"S. Adeyemi",s:44,c:.46,sal:0.25,age:18},
  {n:"W. Bauer",s:49,c:.38,sal:0.3,age:20}];
 
+/* ═══ 주말 이벤트 ═══
+   auto = 자동 적용 / choice = 선택지. cond(S) 로 등장 조건 제한 */
+const EVENTS=[
+ {id:"tyre",kind:"good",w:10,
+  t:["타이어 공급사 협찬","Tyre supplier deal"],
+  d:["공급사가 이번 주말 타이어를 무상 지원한다. <b>변동비가 절반</b>으로 줄어든다.",
+     "Your supplier covers this weekend's tyres. <b>Variable costs are halved.</b>"],
+  apply:S=>{S.mod.varMult=0.5;}},
+
+ {id:"merch",kind:"good",w:10,cond:S=>S.brand>=20,
+  t:["굿즈 완판","Merchandise sell-out"],
+  d:["새로 낸 팀 굿즈가 완판됐다. 브랜드가 클수록 많이 들어온다.",
+     "The new team merchandise sold out. The bigger your brand, the bigger the cheque."],
+  apply:S=>{const amt=Math.round((2+S.brand*0.09)*10)/10; S.cash+=amt; S.ledger.evCash+=amt; S.mod.cash=amt;}},
+
+ {id:"angel",kind:"good",w:8,
+  t:["신규 스폰서 합류","New sponsor signs on"],
+  d:["지역 스폰서가 한 라운드짜리 계약을 제안했다. 즉시 현금이 들어온다.",
+     "A local sponsor signs a one-round deal. Immediate cash."],
+  apply:S=>{S.cash+=6; S.ledger.evCash+=6; S.mod.cash=6;}},
+
+ {id:"engineer",kind:"good",w:7,
+  t:["스타 엔지니어 영입","Star engineer joins"],
+  d:["경쟁 팀에서 수석 엔지니어가 넘어왔다. <b>에어로 +1, 파워 +1</b>을 공짜로 얻는다.",
+     "A lead engineer defects from a rival. <b>Aero +1 and Power +1</b>, free."],
+  apply:S=>{S.a=Math.min(100,S.a+1); S.p=Math.min(100,S.p+1); S.mod.note="aero+1 power+1";}},
+
+ {id:"fanvote",kind:"good",w:8,
+  t:["올해의 팀 팬투표 1위","Fan vote: team of the year"],
+  d:["팬 투표에서 1위를 했다. <b>브랜드 +4.</b>",
+     "You topped the fans' team-of-the-year vote. <b>Brand +4.</b>"],
+  apply:S=>{S.brand=Math.min(100,S.brand+4); S.mod.note="brand+4";}},
+
+ {id:"supplier",kind:"good",w:9,
+  t:["부품사 특별 할인","Supplier discount"],
+  d:["부품 공급사가 이번 라운드 <b>개발비를 25% 할인</b>해준다. 지금이 개발할 때다.",
+     "Your parts supplier offers <b>25% off R&D this round</b>. A good moment to develop."],
+  apply:S=>{S.mod.devMult=0.75;}},
+
+ {id:"tunnel",kind:"bad",w:7,
+  t:["풍동 고장","Wind tunnel breakdown"],
+  d:["풍동이 멈춰 외부 시설을 빌려야 한다. 이번 라운드 <b>개발비가 30% 비싸진다.</b>",
+     "The wind tunnel is down; you must rent outside. <b>R&D costs 30% more this round.</b>"],
+  apply:S=>{S.mod.devMult=1.30;}},
+
+ {id:"freight",kind:"bad",w:7,
+  t:["물류 지연","Freight delayed"],
+  d:["예비 부품이 제때 도착하지 않았다. 이번 주말 <b>신뢰성 −3.</b>",
+     "Spare parts didn't arrive in time. <b>Reliability −3</b> this weekend."],
+  apply:S=>{S.mod.relDelta=-3;}},
+
+ {id:"pullout",kind:"bad",w:6,cond:S=>S.round>=2,
+  t:["스폰서 노출 축소","Sponsor scales back"],
+  d:["스폰서가 이번 라운드 노출을 줄였다. <b>스폰서 수익 30% 감소.</b>",
+     "A sponsor cuts its activation this round. <b>Sponsorship down 30%.</b>"],
+  apply:S=>{S.mod.sponMult=0.70;}},
+
+ {id:"recall",kind:"choice",w:8,
+  t:["부품 리콜 경고","Parts recall warning"],
+  d:["공급사가 서스펜션 부품에 결함 가능성을 알려왔다. 지금 교체하면 돈이 들고, 그냥 가면 위험하다.",
+     "Your supplier flags a possible suspension defect. Replacing costs money; racing on is a gamble."],
+  opts:[
+   {t:["지금 전량 교체 ($4.0M)","Replace now ($4.0M)"],
+    d:["확실하게 막는다.","Removes the risk entirely."],
+    ok:S=>S.cash>=4,
+    apply:S=>{S.cash-=4;S.ledger.evCost+=4;S.mod.cash=-4;}},
+   {t:["그대로 출전","Race as is"],
+    d:["이번 주말 <b>신뢰성 −7.</b> 안 터질 수도 있다.","<b>Reliability −7</b> this weekend. It may hold."],
+    apply:S=>{S.mod.relDelta=-7;}}]},
+
+ {id:"payday",kind:"choice",w:7,cond:S=>S.round<=6&&!S.prizeCut,
+  t:["선지급 제안","Advance offer"],
+  d:["한 투자사가 지금 큰돈을 주는 대신, 이번 시즌 남은 <b>레이스 상금의 15%</b>를 가져가겠다고 한다.",
+     "An investor offers cash now in exchange for <b>15% of your remaining race prize money</b> this season."],
+  opts:[
+   {t:["받는다 (+$14.0M)","Take it (+$14.0M)"],
+    d:["당장 개발에 쓸 돈이 생긴다. 대신 남은 라운드 상금이 줄어든다.",
+       "Money to develop with now - but smaller prize cheques for the rest of the season."],
+    apply:S=>{S.cash+=14;S.ledger.evCash+=14;S.prizeCut=0.15;S.mod.cash=14;unlock("fund");}},
+   {t:["거절한다","Decline"],
+    d:["상금을 온전히 지킨다.","You keep every cent of your prize money."],
+    apply:S=>{}}]},
+
+ {id:"prospect",kind:"choice",w:7,cond:S=>S.academy.length<3,
+  t:["유망주 급매","Prospect available"],
+  d:["해체된 팀의 유망주가 헐값에 나왔다. 실력은 아직이지만 <b>아카데미에서 매 라운드 성장</b>한다.",
+     "A junior from a collapsed team is going cheap. Raw, but he <b>develops every round in your academy</b>."],
+  opts:[
+   {t:["영입한다 ($2.0M)","Sign him ($2.0M)"],
+    d:["아카데미에 합류한다. 키워서 1군에 올리거나 나중에 팔 수 있다.",
+       "Joins your academy. Promote him later, or sell him on."],
+    ok:S=>S.cash>=2&&S.academy.length<3,
+    apply:S=>{S.cash-=2;S.ledger.evCost+=2;S.mod.cash=-2;
+      S.academy.push({n:"K. Brandt",s:58,c:.50,sal:0.3,age:19,pts:0,paid:2});
+      unlock("human");}},
+   {t:["넘긴다","Pass"],d:["다른 팀이 데려갈 것이다.","Someone else will take him."],apply:S=>{}}]}
+];
+
 const DNF_REASONS=[["엔진 블로우","engine failure"],["기어박스 고장","gearbox failure"],
  ["유압 계통 이상","hydraulics"],["브레이크 과열","brake failure"],["접촉 사고","collision damage"],
  ["파워유닛 이상","power unit failure"]];
@@ -652,14 +769,32 @@ function newState(tk,name){
     market:shuffle(FREE_AGENTS).slice(0,3).map(d=>({...d})),
     chanUsed:{social:0,fanzone:0,docu:0,global:0},
     devRound:0,mkRound:0,mkList:[],practiceSpend:0,qMode:"bal",practiceDone:false,
+    ev:null,evDone:false,mod:blankMod(),prizeCut:0,
     sponsor:"safe",strat:"bal",lastBest:20,
     rivals:RIVALS.map((r,i)=>({n:r.n,cp:r.cp,baseCp:r.cp,c:r.c,tier:i,pts:0,
       d:r.d.map(x=>({n:x[0],s:x[1],pts:0}))})),
     ledger:{prize:0,spon:0,merch:0,ie:0,dev:0,mk:0,fixBase:0,fixSal:0,
             varTyre:0,varRepair:0,varPractice:0,ip:0,eq:0,
-            transferIn:0,transferOut:0,transferGain:0,seasonPrize:0},
+            transferIn:0,transferOut:0,transferGain:0,seasonPrize:0,evCash:0,evCost:0},
     results:[],concepts:{},lastResult:null,over:false,grid:null,pendingTransfers:[]};
 }
+function blankMod(){return{varMult:1,devMult:1,relDelta:0,sponMult:1,cash:0,note:null};}
+const effRel=()=>Math.max(20,Math.min(100,S.rel+(S.mod?S.mod.relDelta:0)));
+
+/* 라운드 시작 시 이벤트 추첨 */
+function rollEvent(){
+  S.mod=blankMod(); S.ev=null; S.evDone=false;
+  if(Math.random()>0.50)return;                     // 약 2라운드에 1번
+  const pool=EVENTS.filter(e=>!e.cond||e.cond(S));
+  const tot=pool.reduce((x,e)=>x+e.w,0);
+  let r=Math.random()*tot;
+  const pick=pool.find(e=>(r-=e.w)<=0)||pool[0];
+  S.ev={id:pick.id};
+  if(pick.kind!=="choice"){ pick.apply(S); S.evDone=true; }
+  save();
+}
+const evDef=()=>S.ev?EVENTS.find(e=>e.id===S.ev.id):null;
+
 function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 const T=()=>TEAMS[S.tk];
 const seasonTarget=()=>Math.max(1,T().target-Math.floor((S.season-1)/3));
@@ -700,11 +835,12 @@ function nextSeason(){
   S.over=false; S.phase="paddock"; S.grid=null; S.practiceDone=false;
   S.devRound=0; S.mkRound=0; S.mkList=[]; S.practiceSpend=0; S.qMode="bal";
   S.sponsor="safe"; S.strat="bal"; S.lastBest=20; S.pendingTransfers=[];
+  S.prizeCut=0; S.ev=null; S.evDone=false; S.mod=blankMod();
   S.chanUsed={social:0,fanzone:0,docu:0,global:0};
   S.brand=Math.max(8,S.brand-1.5);                     // 오프시즌 브랜드 자연감소
   S.ledger={prize:0,spon:0,merch:0,ie:0,dev:0,mk:0,fixBase:0,fixSal:0,
             varTyre:0,varRepair:0,varPractice:0,ip:0,eq:0,
-            transferIn:0,transferOut:0,transferGain:0,seasonPrize:0};
+            transferIn:0,transferOut:0,transferGain:0,seasonPrize:0,evCash:0,evCost:0};
   // 새 이적시장 · 유망주
   S.market=shuffle(FREE_AGENTS).slice(0,3).map(d=>({...d,pts:0,paid:0}));
   if(S.academy.length<1)S.academy=[{...ACADEMY_POOL[Math.floor(Math.random()*ACADEMY_POOL.length)],pts:0,paid:0}];
@@ -735,7 +871,7 @@ const capLeft=()=>CAP-S.capUsed;
 const capAvail=()=>CAP-S.capUsed-(ROUNDS-S.round)*(FIXED_CAP+VAR_EST);
 const netWorth=()=>S.cash-S.debt;
 const stratOf=()=>STRATS.find(x=>x.id===S.strat);
-const dnfProb=st=>(100-S.rel)/100*0.30*st.risk;
+const dnfProb=st=>(100-effRel())/100*0.30*st.risk;
 const brandPerRound=()=>(9.0/100)+(4.5*T().spMult/70);
 const mkPlanned=()=>S.mkList.reduce((x,id)=>x+CHANNELS.find(c=>c.id===id).cost,0);
 
@@ -767,7 +903,7 @@ function buildEntries(){
   S.seats.forEach((d,i)=>cars.push({
     id:"me"+i,team:S.name,col:T().col,me:true,seat:i,name:d.n,
     perf:carPerf()+0.20*d.s*d.cond+st.pace+(Math.random()*6-3),
-    cons:d.c,relv:S.rel,risk:st.risk}));
+    cons:d.c,relv:effRel(),risk:st.risk}));
   S.rivals.forEach(r=>r.d.forEach((d,i)=>cars.push({
     id:r.n+i,team:r.n,col:r.c,me:false,name:d.n,
     perf:r.cp+0.20*d.s*(0.92+Math.random()*0.16)+(Math.random()*6-3),
@@ -882,16 +1018,16 @@ function settleRace(){
   const fin=mine.filter(c=>!c.out).map(c=>c.pos);
   const best=fin.length?Math.min(...fin):99;
 
-  const prizeG=mine.reduce((x,c)=>x+(c.out?DNF_PRIZE:(PRIZE[c.pos-1]||0.4)),0);
+  const prizeG=mine.reduce((x,c)=>x+(c.out?DNF_PRIZE:(PRIZE[c.pos-1]||0.4)),0)*(1-(S.prizeCut||0));
   const equityCut=S.equitySold?prizeG*EQ_SHARE:0;
   const hit=best<=sp.need;
-  const sponsorRev=(sp.base+(hit?sp.bonus:0))*brandMult();
+  const sponsorRev=(sp.base+(hit?sp.bonus:0))*brandMult()*S.mod.sponMult;
   const merch=merchRev(best);
   const ie=Math.max(0,S.cash)*0.006;
 
   const fixBase=T().baseFixed, fixSal=salaries();
   const nDnf=mine.filter(c=>c.out).length;
-  const varTyre=st.cost*2, varRepair=nDnf*1.6, varPractice=S.practiceSpend;
+  const varTyre=st.cost*2*S.mod.varMult, varRepair=nDnf*1.6, varPractice=S.practiceSpend;
   const interest=S.debt*LOAN_RATE;
   const dev=S.devRound, mk=S.mkRound;
 
@@ -926,6 +1062,7 @@ function settleRace(){
     sponsorId:sp.id,hitBonus:hit,stratId:st.id,gained:mine.reduce((x,c)=>x+c.pt,0),
     fastest:R.fastest,champPos:0,champPosBefore:before,
     transfers:(S.pendingTransfers||[]).slice(),
+    ev:S.ev?{id:S.ev.id,mod:{...S.mod}}:null,
     grid:mine.map(c=>c.grid)};
 
   S.round++; res.champPos=myPos();
@@ -936,6 +1073,7 @@ function settleRace(){
   S.results.push({r:res.round,best:best<99?best:null,pts:res.gained,dnf:nDnf});
   S.lastResult=res;
   S.devRound=0;S.mkRound=0;S.mkList=[];S.practiceSpend=0;S.qMode="bal";S.grid=null;S.practiceDone=false;S.pendingTransfers=[];
+  S.ev=null;S.evDone=false;S.mod=blankMod();
   S.phase="result";
   if(S.round>=ROUNDS)S.over=true;
   save();
@@ -1039,6 +1177,7 @@ function renderPhases(){
 
 /* ═════════ 패독 ═════════ */
 function devRow(key,koL,enL,val,cost,cls,mark){
+  cost=cost*(S.mod?S.mod.devMult:1);
   const ok=S.cash>=cost&&capAvail()>=cost&&val<100;
   return `<div class="devrow">
     <div class="nm">${LANG==="en"?enL:koL}<em>${enL}</em></div>
@@ -1096,7 +1235,7 @@ function renderPaddock(){
     ${STRATS.map(s=>{const pr=dnfProb(s)*100;
       return `<button class="opt ${S.strat===s.id?"sel":""}" data-st="${s.id}">
         <div class="t">${LANG==="en"?s.t[1]:s.t[0]}<span class="pay" style="color:${pr>13?"var(--red)":pr>7?"var(--yellow)":"var(--green)"}">${Bp("리타이어","DNF")} ${pr.toFixed(0)}%</span></div>
-        <div class="d">${LANG==="ko"?s.d[0]:LANG==="en"?s.d[1]:s.d[0]+" · "+s.d[1]} · ${Bp("변동비","variable")} ${M(s.cost*2)}</div></button>`;}).join("")}
+        <div class="d">${LANG==="ko"?s.d[0]:LANG==="en"?s.d[1]:s.d[0]+" · "+s.d[1]} · ${Bp("변동비","variable")} ${M(s.cost*2*S.mod.varMult)}</div></button>`;}).join("")}
     </div></div></div>`;
 
   const fin=`<div class="card"><div class="hd"><h2>${B("자금 조달","FINANCING")}</h2>
@@ -1114,20 +1253,50 @@ function renderPaddock(){
         :Bp("현금 $25.0M. 갚을 의무는 없지만 <b>이후 모든 상금의 25%</b>를 영구히 넘긴다.","$25.0M now. Never repaid - but you hand over <b>25% of all future prize money</b>, permanently.")}</div></button>
     </div></div></div>`;
 
-  const committed=fixedCost()+st.cost*2+S.debt*LOAN_RATE+mkCost+S.devRound;
+  const committed=fixedCost()+st.cost*2*S.mod.varMult+S.debt*LOAN_RATE+mkCost+S.devRound;
   const prev=`<div class="card"><div class="hd"><h3>${B("레이스 전 확정 지출","COMMITTED BEFORE THE RACE")}</h3>
     <span class="tag">Committed</span></div><div class="bd pl">
     <div class="l"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span class="neg">−${M(T().baseFixed)}</span></div>
     <div class="l"><span class="k">${Bi("고정비 — 드라이버 연봉","Fixed - driver salaries")}</span><span class="neg">−${M(salaries())}</span></div>
-    <div class="l"><span class="k">${Bi("변동비 — 타이어·부품 (2대)","Variable - tyres & parts (2 cars)")}</span><span class="neg">−${M(st.cost*2)}</span></div>
+    <div class="l"><span class="k">${Bi("변동비 — 타이어·부품 (2대)","Variable - tyres & parts (2 cars)")}</span><span class="neg">−${M(st.cost*2*S.mod.varMult)}</span></div>
     ${S.debt>0?`<div class="l"><span class="k">${Bi("이자비용","Interest")}</span><span class="neg">−${M(S.debt*LOAN_RATE)}</span></div>`:""}
     ${mkCost>0?`<div class="l"><span class="k">${Bi("마케팅비","Marketing")}</span><span class="neg">−${M(mkCost)}</span></div>`:""}
     ${S.devRound>0?`<div class="l"><span class="k">${Bi("개발비 (집행 완료)","R&D (already spent)")}</span><span class="neg">−${M(S.devRound)}</span></div>`:""}
     <div class="l sum"><span class="k">${Bi("이만큼은 벌어야 본전","You must earn this just to break even")}</span><span class="warn">${M(committed)}</span></div></div></div>`;
 
-  $("pPaddock").innerHTML=dev+renderDrivers()+chans+spon+strat+fin+prev+
+  $("pPaddock").innerHTML=renderEvent()+dev+renderDrivers()+chans+spon+strat+fin+prev+
     `<button class="go" id="toPractice">${B("주말 시작 — 연습 주행","Start weekend - Practice")}</button>`;
 }
+function renderEvent(){
+  const e=evDef(); if(!e)return "";
+  const kindTxt=e.kind==="good"?["기회","OPPORTUNITY"]:e.kind==="bad"?["악재","SETBACK"]:["선택","DECISION"];
+  const icon=e.kind==="good"?"+":e.kind==="bad"?"!":"?";
+  const desc=LANG==="ko"?e.d[0]:LANG==="en"?e.d[1]:e.d[0]+`<span class="en2">${e.d[1]}</span>`;
+  let body="";
+  if(e.kind==="choice"&&!S.evDone){
+    body=`<div class="eopts">${e.opts.map((o,i)=>{
+      const ok=!o.ok||o.ok(S);
+      const od=LANG==="ko"?o.d[0]:LANG==="en"?o.d[1]:o.d[0]+`<span class="en2">${o.d[1]}</span>`;
+      return `<button class="opt" data-evopt="${i}" ${ok?"":"disabled"}>
+        <div class="t">${LANG==="en"?o.t[1]:o.t[0]}</div><div class="d">${od}</div></button>`;}).join("")}</div>`;
+  }else{
+    const m=S.mod, tags=[];
+    if(m.varMult!==1)tags.push(Bp("변동비","Variable")+" ×"+m.varMult.toFixed(2));
+    if(m.devMult!==1)tags.push(Bp("개발비","R&D")+" ×"+m.devMult.toFixed(2));
+    if(m.relDelta)tags.push(Bp("신뢰성","Reliability")+" "+m.relDelta);
+    if(m.sponMult!==1)tags.push(Bp("스폰서","Sponsor")+" ×"+m.sponMult.toFixed(2));
+    if(m.cash)tags.push((m.cash>0?"+":"")+M(m.cash));
+    if(m.note)tags.push(m.note);
+    if(S.prizeCut&&e.id==="payday")tags.push(Bp("남은 상금","Remaining prize")+" −15%");
+    body=tags.length?`<span class="eff">${tags.join("  ·  ")}</span>`:"";
+  }
+  return `<div class="evcard ev-${e.kind}">
+    <div class="eh"><div class="eicon">${icon}</div>
+      <div class="et">${LANG==="en"?e.t[1]:e.t[0]}</div>
+      <div class="ek">${Bp(kindTxt[0],kindTxt[1])}</div></div>
+    <div class="eb"><p class="ed">${desc}</p>${body}</div></div>`;
+}
+
 function estPayback(){
   const g=S.mkList.reduce((x,id)=>x+chanGain(id),0);
   return g*brandPerRound()*Math.max(0,ROUNDS-S.round-1);
@@ -1449,6 +1618,7 @@ function renderResult(){
        `<div class="l"><span class="k">${Bi("드라이버 매각","Driver sale")} — ${t.n}</span><span class="pos">+${M(t.amt)}</span></div>`).join("")}
      ${(r.transfers||[]).filter(t=>t.kind==="buy").map(t=>
        `<div class="l"><span class="k">${Bi("드라이버 영입","Driver signing")} — ${t.n}</span><span class="neg">−${M(t.amt)}</span></div>`).join("")}
+     ${(r.ev&&r.ev.mod.cash)?`<div class="l"><span class="k">${Bi("주말 이벤트","Weekend event")} — ${LANG==="en"?EVENTS.find(e=>e.id===r.ev.id).t[1]:EVENTS.find(e=>e.id===r.ev.id).t[0]}</span><span class="${r.ev.mod.cash>0?"pos":"neg"}">${r.ev.mod.cash>0?"+":""}${M(r.ev.mod.cash)}</span></div>`:""}
      ${r.seasonPrize?`<div class="l"><span class="k">${Bi("시즌 말 상금 배분 (최종 P"+r.champPos+")","Season payout (final P"+r.champPos+")")}</span><span class="pos">+${M(r.seasonPrize)}</span></div>`:""}
      <div class="l sum"><span class="k">${Bi("레이스 수익 합계","Race revenue")}</span><span class="pos">+${M(r.revenue)}</span></div>
      <div class="l" style="margin-top:9px"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span class="neg">−${M(r.fixBase)}</span></div>
@@ -1483,10 +1653,10 @@ function renderSide(){
   const st=standings();
   const ds=driverStandings().slice(0,10);
   const L=S.ledger;
-  const rev=L.prize+L.spon+L.merch+L.ie+L.transferIn+L.seasonPrize;
+  const rev=L.prize+L.spon+L.merch+L.ie+L.transferIn+L.seasonPrize+L.evCash;
   const fixed=L.fixBase+L.fixSal;
   const vari=L.varTyre+L.varRepair+L.varPractice;
-  const cost=L.dev+L.mk+fixed+vari+L.ip+L.transferOut;
+  const cost=L.dev+L.mk+fixed+vari+L.ip+L.transferOut+L.evCost;
   const ks=Object.keys(CONCEPTS);
 
   $("side").innerHTML=`
@@ -1510,6 +1680,8 @@ function renderSide(){
        <div class="l ind"><span class="k">${Bi("스폰서","Sponsor")}</span><span>${M(L.spon)}</span></div>
        <div class="l ind"><span class="k">${Bi("머천·중계","Merch & TV")}</span><span>${M(L.merch)}</span></div>
        ${L.seasonPrize>0?`<div class="l ind"><span class="k">${Bi("시즌 배분금","Season payout")}</span><span>${M(L.seasonPrize)}</span></div>`:""}
+       ${(L.evCash>0||L.evCost>0)?`<div class="l"><span class="k">${Bi("이벤트 수지","Events")}</span>
+         <span class="${L.evCash-L.evCost>=0?"pos":"neg"}">${L.evCash-L.evCost>=0?"+":""}${M(L.evCash-L.evCost)}</span></div>`:""}
        <div class="l"><span class="k">${Bi("고정비","Fixed cost")}</span><span class="neg">${M(fixed)}</span></div>
        <div class="l ind"><span class="k">${Bi("기본 운영","Base ops")}</span><span>${M(L.fixBase)}</span></div>
        <div class="l ind"><span class="k">${Bi("드라이버 연봉","Salaries")}</span><span>${M(L.fixSal)}</span></div>
@@ -1555,9 +1727,9 @@ function renderSide(){
 /* ═════════ 시즌 결산 ═════════ */
 function renderFinish(){
   const final=S.cash-S.debt,pos=myPos(),tgt=seasonTarget(),L=S.ledger;
-  const rev=L.prize+L.spon+L.merch+L.ie+L.transferIn+L.seasonPrize;
+  const rev=L.prize+L.spon+L.merch+L.ie+L.transferIn+L.seasonPrize+L.evCash;
   const fixed=L.fixBase+L.fixSal, vari=L.varTyre+L.varRepair+L.varPractice;
-  const opCost=L.dev+L.mk+fixed+vari+L.transferOut;
+  const opCost=L.dev+L.mk+fixed+vari+L.transferOut+L.evCost;
   const op=rev-opCost, net=op-L.ip;
   const capOK=S.capUsed<=CAP, solvent=final>=0, won=pos<=tgt&&solvent&&capOK;
   const per=S.points?L.dev/S.points:0;
@@ -1653,6 +1825,7 @@ function renderFinish(){
      <div class="l ind"><span class="k">${Bi("머천다이즈·중계권","Merchandise & TV")}</span><span>${M(L.merch)}</span></div>
      <div class="l ind"><span class="k">${Bi("이자수익","Interest income")}</span><span>${M(L.ie)}</span></div>
      ${L.transferIn>0?`<div class="l ind"><span class="k">${Bi("드라이버 매각 수입","Driver sales")}</span><span>${M(L.transferIn)}</span></div>`:""}
+     ${L.evCash>0?`<div class="l ind"><span class="k">${Bi("이벤트 수입","Event income")}</span><span>${M(L.evCash)}</span></div>`:""}
      <div class="l sum"><span class="k">${Bi("영업비용","Operating costs")}</span><span class="neg">${M(opCost)}</span></div>
      <div class="l ind"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span>${M(L.fixBase)}</span></div>
      <div class="l ind"><span class="k">${Bi("고정비 — 드라이버 연봉","Fixed - driver salaries")}</span><span>${M(L.fixSal)}</span></div>
@@ -1662,6 +1835,7 @@ function renderFinish(){
      <div class="l ind"><span class="k">${Bi("개발비 (R&D)","R&D")}</span><span>${M(L.dev)}</span></div>
      <div class="l ind"><span class="k">${Bi("마케팅비","Marketing")}</span><span>${M(L.mk)}</span></div>
      ${L.transferOut>0?`<div class="l ind"><span class="k">${Bi("드라이버 영입 지출","Driver signings")}</span><span>${M(L.transferOut)}</span></div>`:""}
+     ${L.evCost>0?`<div class="l ind"><span class="k">${Bi("이벤트 지출","Event costs")}</span><span>${M(L.evCost)}</span></div>`:""}
      <div class="l sum"><span class="k">${Bi("영업이익","Operating profit")}</span>
        <span class="${op>=0?"pos":"neg"}">${op>=0?"+":""}${M(op)}</span></div>
      <div class="l"><span class="k">${Bi("이자비용","Interest expense")}</span><span class="neg">−${M(L.ip)}</span></div>
@@ -1733,6 +1907,24 @@ function renderManual(){
        ["실제 랩 수만큼 진행되며 순위·추월·피트인·리타이어가 실시간으로 나온다. 속도는 조절할 수 있다.",
         "Runs the real lap count with live positions, overtakes, pit stops and retirements. You can change the playback speed."])}
    </div>`)+
+
+   sec("주말 이벤트","Weekend events",`<p>${bi([
+     "매 라운드 <b>절반 정도의 확률</b>로 이벤트가 하나 일어난다. 팀 운영 화면 맨 위에 뜨고, 그 라운드에만 적용된다. 좋은 일, 나쁜 일, 그리고 <b>네가 골라야 하는 일</b> 세 종류다.",
+     "Each round there is roughly a <b>50/50 chance</b> of an event. It appears at the top of the paddock screen and applies to that round only. Three kinds: good, bad, and ones <b>you have to decide on</b>."])}</p>
+     <div class="mgrid">
+     ${item(["기회","Opportunity"],Bp("초록색 카드","green card"),
+       ["타이어 협찬(변동비 절반), 굿즈 완판(현금), 스타 엔지니어 합류(에어로·파워 +1), 부품사 할인(개발비 25% 할인) 등. <b>할인이 붙은 라운드에 개발을 몰아주면</b> 같은 돈으로 더 많이 산다.",
+        "Tyre sponsorship (variable costs halved), a merchandise sell-out (cash), a star engineer joining (+1 aero and power), a supplier discount (25% off R&D) and more. <b>Concentrate your development in a discount round</b> and the same money buys more."])}
+     ${item(["악재","Setback"],Bp("빨간색 카드","red card"),
+       ["풍동 고장(개발비 30% 인상), 물류 지연(신뢰성 −3), 스폰서 노출 축소(스폰서 수익 −30%) 등. 개발비가 비싸진 라운드에는 <b>차라리 아끼고 다음 라운드를 노리는</b> 것도 방법이다.",
+        "A wind tunnel breakdown (R&D 30% dearer), freight delays (reliability −3), a sponsor scaling back (−30% sponsorship). When R&D gets expensive, <b>saving your money for next round</b> is often the better play."])}
+     ${item(["선택","Decision"],Bp("노란색 카드","yellow card"),
+       ["부품 리콜(지금 $4M 내고 안전 확보 vs 신뢰성 −7 감수), 선지급 제안(지금 $14M 받고 남은 상금 15% 양도), 유망주 급매($2M에 영입). <b>기대값을 계산해서</b> 고르는 연습이다.",
+        "A parts recall (pay $4M now, or race on at −7 reliability), a cash advance ($14M now for 15% of remaining prize money), a cut-price prospect ($2M). Practice at <b>working out the expected value</b> before choosing."])}
+     </div>
+     <p style="margin-top:10px">${bi([
+       "이벤트는 <b>운</b>이지만, 그 운을 어떻게 쓰는지는 실력이다. 좋은 이벤트가 왔을 때 돈이 없으면 못 쓴다 — 그래서 항상 약간의 <b>현금 여유</b>를 남겨두는 팀이 더 멀리 간다.",
+       "Events are <b>luck</b>, but what you do with them is skill. A great opportunity is worthless if you have no cash to use it - which is why teams that keep a little <b>cash spare</b> go further."])}</p>`)+
 
    sec("수익 3종","Three revenue streams",`<div class="mgrid">
      ${item(["상금","Prize money"],Bp("차량 1대당 순위별","per car, by finishing position"),
@@ -1878,6 +2070,7 @@ document.addEventListener("click",e=>{
     $("tname").value=TEAMS[picked].n;$("start").disabled=false;renderSelect();return;}
   if(t.closest("#start")&&picked){
     S=newState(picked,($("tname").value.trim().toUpperCase()||TEAMS[picked].n));
+    rollEvent();
     $("select").classList.add("hide");$("game").classList.remove("hide");
     renderGame();save();return;}
 
@@ -1888,8 +2081,10 @@ document.addEventListener("click",e=>{
   if(bb){const k=bb.dataset.buy,n=+bb.dataset.n;
     for(let i=0;i<n;i++){
       const cur=k==="a"?S.a:k==="p"?S.p:S.rel; if(cur>=100)break;
-      const c=mcOf(k); if(S.cash<c||capAvail()<c)break;
-      S.cash-=c;S.capUsed+=c;S.devRound+=c;S.ledger.dev+=c;
+      const c=mcOf(k);
+      const cc=c*S.mod.devMult;
+      if(S.cash<cc||capAvail()<cc)break;
+      S.cash-=cc;S.capUsed+=cc;S.devRound+=cc;S.ledger.dev+=cc;
       if(k==="a")S.a++;else if(k==="p")S.p++;else S.rel++;
       unlock("dim");unlock("opp");}
     save();renderGame();return;}
@@ -1960,6 +2155,12 @@ document.addEventListener("click",e=>{
     save();renderGame();return;}
 
   // 연습 옵션
+  const eo=t.closest("[data-evopt]");
+  if(eo&&!eo.disabled&&S.ev&&!S.evDone){
+    const e=evDef(), o=e.opts[+eo.dataset.evopt];
+    if(!o.ok||o.ok(S)){ o.apply(S); S.evDone=true; save(); renderGame(); }
+    return;}
+
   const pb=t.closest("[data-prac]");
   if(pb&&!pb.disabled){S.practiceSpend=pb.dataset.prac==="1"?1.2:0;save();renderGame();return;}
   // 퀄리 모드
@@ -1984,7 +2185,7 @@ document.addEventListener("click",e=>{
     settleRace();RACE=null;renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
   if(t.closest("#nextRound")){
     if(S.over){S.phase="finish";save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
-    S.phase="paddock";save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+    S.phase="paddock";rollEvent();save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
 
   // 속도
   const spb=t.closest("[data-spd]");
@@ -1993,7 +2194,7 @@ document.addEventListener("click",e=>{
     if(RACE&&!RACE.done)tickRace(); return;}
 
   if(t.closest("#nextSeason")){
-    nextSeason(); renderGame(); window.scrollTo({top:0,behavior:"smooth"}); return;}
+    nextSeason(); rollEvent(); renderGame(); window.scrollTo({top:0,behavior:"smooth"}); return;}
   if(t.closest("#again")||t.closest("#reset"))restart();
 });
 
@@ -2018,6 +2219,9 @@ renderSelect();
     if(S.season===undefined)S.season=1;
     if(!S.career)S.career={seasons:[],titles:0,targetsMet:0,netStart:S.cash};
     if(!S.pendingTransfers)S.pendingTransfers=[];
+    if(!S.mod)S.mod=blankMod();
+    if(S.prizeCut===undefined)S.prizeCut=0;
+    if(S.ledger&&S.ledger.evCash===undefined){S.ledger.evCash=0;S.ledger.evCost=0;}
     if(S.ledger&&S.ledger.transferIn===undefined){S.ledger.transferIn=0;S.ledger.transferOut=0;S.ledger.transferGain=0;}
     S.rivals.forEach(r=>{if(r.baseCp===undefined)r.baseCp=r.cp;});
     if(S.over&&S.phase!=="result")S.phase="finish";
