@@ -394,6 +394,33 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
 .ev-bad{--evc:var(--red);--evbg:#2A0611}
 .ev-choice{--evc:var(--yellow);--evbg:#2A2000}
 
+/* ── CFO advisor ── */
+.cfo{--ct:var(--blue);--cbg:#0A1526;
+  border:1px solid var(--line);border-left:3px solid var(--ct);border-radius:3px;
+  background:linear-gradient(120deg,var(--cbg),#0B1329 70%);margin-bottom:14px;overflow:hidden}
+.cfo.tone-bad{--ct:var(--red);--cbg:#22060F}
+.cfo.tone-good{--ct:var(--green);--cbg:#062A1D}
+.cfo.tone-warn{--ct:var(--yellow);--cbg:#241C03}
+.cfo-h{display:flex;align-items:center;gap:11px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.cfo-av{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:var(--ct);color:#07101F;font-family:var(--disp);font-weight:800;font-size:14px;letter-spacing:.02em}
+.cfo-n{font-family:var(--disp);font-size:17px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+.cfo-r{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;margin-top:2px}
+.cfo-tag{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ct);border:1px solid var(--ct);border-radius:2px;padding:3px 7px}
+.cfo-b{padding:12px 14px}
+.cfo-p{margin:0;font-size:13.5px;line-height:1.62;color:var(--ink2)}
+.cfo-p b{color:var(--ink);font-weight:700}
+.cfo-more{margin-top:11px;padding-top:10px;border-top:1px solid var(--line);
+  display:flex;flex-direction:column;gap:9px}
+.cfo-sub{display:flex;gap:9px;font-size:12.5px;line-height:1.55;color:var(--dim)}
+.cfo-sub b{color:var(--ink2);font-weight:700}
+.cfo-sub .cfo-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex:none;margin-top:7px}
+.cfo-sub.tone-bad .cfo-dot{background:var(--red)}
+.cfo-sub.tone-good .cfo-dot{background:var(--green)}
+.cfo-sub.tone-warn .cfo-dot{background:var(--yellow)}
+.cfo-sub .en2{font-size:11.5px}
+
 /* ── teaching aids ── */
 .spark{width:100%;height:26px;display:block;margin-top:5px;overflow:visible}
 .sp-line{fill:none;stroke:var(--yellow);stroke-width:1.6;opacity:.85;vector-effect:non-scaling-stroke}
@@ -1370,7 +1397,7 @@ function renderPaddock(){
     ${S.devRound>0?`<div class="l"><span class="k">${Bi("개발비 (집행 완료)","R&D (already spent)")}</span><span class="neg">−${M(S.devRound)}</span></div>`:""}
     <div class="l sum"><span class="k">${Bi("이만큼은 벌어야 본전","You must earn this just to break even")}</span><span class="warn">${M(committed)}</span></div></div></div>`;
 
-  $("pPaddock").innerHTML=renderEvent()+dev+renderDrivers()+chans+spon+strat+fin+prev+
+  $("pPaddock").innerHTML=renderEvent()+renderCFO()+dev+renderDrivers()+chans+spon+strat+fin+prev+
     `<button class="go" id="toPractice">${B("주말 시작 — 연습 주행","Start weekend - Practice")}</button>`;
 }
 function renderEvent(){
@@ -2028,6 +2055,24 @@ function renderManual(){
         "Runs the real lap count with live positions, overtakes, pit stops and retirements. You can change the playback speed."])}
    </div>`)+
 
+   sec("재무팀장 마리사 첸","Your CFO, Marisa Chen",`<p>${bi([
+     "팀 운영 화면 맨 위에서 <b>재무팀장</b>이 매 라운드 조언한다. 정답을 찍어주지는 않는다 — 지금 이 결정이 <b>재무적으로 무슨 뜻인지</b> 네 팀의 실제 숫자로 짚어줄 뿐이다.",
+     "Your <b>CFO</b> speaks at the top of the paddock screen every round. She never tells you what to click - she explains <b>what the decision means financially</b>, using your team's real numbers."])}</p>
+     <div class="mgrid">
+     ${item(["빨간 카드 — 경고","Red - urgent"],Bp("생존이 걸린 문제","survival is at stake"),
+       ["현금이 바닥나 가는 중이거나 이자 부담이 커졌을 때. <b>몇 라운드분이 남았는지</b>를 숫자로 알려준다. 이때는 개발보다 버티는 게 먼저다.",
+        "Cash is running out, or interest has grown heavy. She tells you <b>how many rounds of runway</b> remain. Survival comes before development here."])}
+     ${item(["초록 카드 — 기회","Green - opportunity"],Bp("지금 써야 이득","spend now, not later"),
+       ["개발비 할인 같은 이벤트가 떴을 때. <b>같은 돈으로 얼마나 더 사는지</b>를 계산해서 보여준다.",
+        "An event like an R&D discount is live. She works out <b>how much more the same money buys</b> right now."])}
+     ${item(["노란·파란 카드 — 조언","Yellow / blue - advice"],Bp("생각할 거리","something to weigh"),
+       ["계약의 기대값 차이, 항목별 한계비용 비교, 마케팅 회수 시간, 드라이버 연봉의 비중, 순위 한 계단의 금액 같은 것들. <b>고르는 건 언제나 너다.</b>",
+        "The gap in expected value between deals, the marginal cost of each upgrade area, marketing payback time, what share of costs your drivers are, what one championship place is worth. <b>The choice always stays yours.</b>"])}
+     </div>
+     <p style="margin-top:10px">${bi([
+       "조언은 <b>가장 급한 것부터</b> 하나가 크게 나오고, 그 아래 두 개가 작게 붙는다. 상황이 바뀌면 조언도 바뀐다 — 같은 말을 반복하면 그건 <b>네가 아직 그 문제를 안 풀었다</b>는 뜻이다.",
+       "The <b>most urgent</b> point comes first and larger, with up to two smaller notes beneath. The advice changes as your situation changes - if she keeps repeating herself, it means <b>you haven't dealt with that problem yet</b>."])}</p>`)+
+
    sec("주말 이벤트","Weekend events",`<p>${bi([
      "매 라운드 <b>절반 정도의 확률</b>로 이벤트가 하나 일어난다. 팀 운영 화면 맨 위에 뜨고, 그 라운드에만 적용된다. 좋은 일, 나쁜 일, 그리고 <b>네가 골라야 하는 일</b> 세 종류다.",
      "Each round there is roughly a <b>50/50 chance</b> of an event. It appears at the top of the paddock screen and applies to that round only. Three kinds: good, bad, and ones <b>you have to decide on</b>."])}</p>
@@ -2448,6 +2493,164 @@ function brandChart(){           // 브랜드 추이
 function real(ko,en){
   return `<div class="realbox"><span class="rl">${Bp("실제 F1","REAL F1")}</span>
     <span>${LANG==="ko"?ko:LANG==="en"?en:ko+`<span class="en2">${en}</span>`}</span></div>`;
+}
+</script>
+<script>
+/* ═════════ 재무팀장 ═════════
+   정답을 찍어주지 않는다. 지금 이 결정이 재무적으로 무슨 뜻인지 숫자로 짚어준다. */
+
+function cfoCtx(){
+  const st=stratOf(), est=estOutcome(), bm=brandMult();
+  const fc=fixedCost(), varC=st.cost*2*S.mod.varMult, interest=S.debt*LOAN_RATE;
+  const burn=fc+varC+interest;                       // 라운드당 최소 지출
+  const left=ROUNDS-S.round;                         // 이번 라운드 포함 남은 수
+  const mcs=[["a",mcA(S.a)*S.mod.devMult,Bp("에어로","Aero")],
+             ["p",mcP(S.p)*S.mod.devMult,Bp("파워","Power")],
+             ["r",mcR(S.rel)*S.mod.devMult,Bp("신뢰성","Reliability")]].sort((x,y)=>x[1]-y[1]);
+  const dnf1=dnfProb(st);                            // 차 1대 리타이어 확률
+  const dnfAny=1-Math.pow(1-dnf1,2);                 // 두 대 중 하나라도
+  const evOf=x=>x.id==="safe"?x.base*bm:x.id==="perf"?(x.base+est.podium*x.bonus)*bm:(est.win*x.bonus)*bm;
+  const avail=SPONSORS.filter(x=>!(x.brandNeed&&S.brand<x.brandNeed));
+  const bestSp=avail.reduce((a,b)=>evOf(b)>evOf(a)?b:a);
+  const curSp=SPONSORS.find(x=>x.id===S.sponsor);
+  const pos=myPos(), tgt=seasonTarget();
+  return{st,est,bm,fc,varC,interest,burn,left,mcs,dnf1,dnfAny,evOf,bestSp,curSp,pos,tgt,
+         runway:burn>0?S.cash/burn:99, cap:capAvail(), sal:salaries()};
+}
+
+const ADVICE=[
+ /* ── 생존 ── */
+ {id:"runway",u:c=>c.runway<2.2?100:0,tone:"bad",
+  ko:c=>`현금이 <b>${M(S.cash)}</b>인데 이번 라운드에만 <b>${M(c.burn)}</b>이 나간다. 남은 건 <b>${c.runway.toFixed(1)}라운드분</b>이다.
+        지금은 개발할 때가 아니라 <b>버틸 때</b>다 — 상금이 들어올 때까지 지갑을 닫자. 성적이 아무리 좋아도 현금이 0이 되면 팀은 문을 닫는다.`,
+  en:c=>`You have <b>${M(S.cash)}</b> and this round alone costs <b>${M(c.burn)}</b> — about <b>${c.runway.toFixed(1)} rounds</b> of runway left.
+        This is not a moment to develop; it is a moment to <b>survive</b>. Close the wallet until prize money lands. However good the results, a team at zero cash stops existing.`},
+
+ {id:"debtload",u:c=>S.debt>0?Math.min(88,28+S.debt*2.0):0,tone:"bad",
+  ko:c=>`부채 <b>${M(S.debt)}</b>의 이자가 라운드당 <b>${M(c.interest)}</b>다. 고정비의 ${(c.interest/c.fc*100).toFixed(0)}%가 <b>순위와 무관하게</b> 이자로 나간다.
+        여유가 생기면 원금부터 갚자 — 갚는 순간 그 이자는 영구히 사라진다.`,
+  en:c=>`Interest on <b>${M(S.debt)}</b> of debt runs <b>${M(c.interest)}</b> a round — ${(c.interest/c.fc*100).toFixed(0)}% of your fixed costs, leaving <b>regardless of where you finish</b>.
+        Repay principal as soon as you can: the moment you do, that interest is gone for good.`},
+
+ /* ── 이벤트 활용 ── */
+ {id:"discount",u:()=>S.mod.devMult<1?86:0,tone:"good",
+  ko:c=>`지금 개발비가 <b>${((1-S.mod.devMult)*100).toFixed(0)}% 할인</b> 중이다. ${M(10)}을 쓰면 평소 <b>${M(10/S.mod.devMult)}</b>어치를 산다.
+        할인은 이번 라운드뿐이다 — 쓸 계획이었다면 <b>지금 몰아서</b> 쓰는 게 맞다.`,
+  en:c=>`R&D is <b>${((1-S.mod.devMult)*100).toFixed(0)}% off</b> this round. ${M(10)} buys what would normally cost <b>${M(10/S.mod.devMult)}</b>.
+        The discount ends with this round - if you were going to spend, <b>concentrate it here</b>.`},
+
+ {id:"devpenalty",u:()=>S.mod.devMult>1?82:0,tone:"warn",
+  ko:c=>`개발비가 <b>${((S.mod.devMult-1)*100).toFixed(0)}% 비싸진</b> 라운드다. 같은 성능을 사는 데 돈이 더 든다.
+        급하지 않다면 <b>이번엔 넘기고</b> 다음 라운드에 쓰자. 안 쓰는 것도 하나의 선택이다.`,
+  en:c=>`R&D costs <b>${((S.mod.devMult-1)*100).toFixed(0)}% more</b> this round — the same performance simply costs more money.
+        Unless it is urgent, <b>skip it</b> and spend next round. Choosing not to spend is also a decision.`},
+
+ /* ── 계약 ── */
+ {id:"sponsor",u:c=>{const d=c.evOf(c.bestSp)-c.evOf(c.curSp);return d>0.8?78:0;},tone:"tip",
+  ko:c=>`계약을 다시 보자. 지금 고른 <b>${c.curSp.t[0]}</b>의 기대값은 <b>${M(c.evOf(c.curSp))}</b>, <b>${c.bestSp.t[0]}</b>은 <b>${M(c.evOf(c.bestSp))}</b>다.
+        네 차의 포디움 확률 <b>${pct(c.est.podium)}</b>를 곱해서 나온 숫자다. 차이는 라운드당 ${M(c.evOf(c.bestSp)-c.evOf(c.curSp))} — 10라운드면 ${M((c.evOf(c.bestSp)-c.evOf(c.curSp))*10)}다.`,
+  en:c=>`Reconsider the deal. Your current pick <b>${c.curSp.t[1]}</b> is worth <b>${M(c.evOf(c.curSp))}</b> in expectation; <b>${c.bestSp.t[1]}</b> is worth <b>${M(c.evOf(c.bestSp))}</b>.
+        That comes from multiplying by your <b>${pct(c.est.podium)}</b> podium chance. The gap is ${M(c.evOf(c.bestSp)-c.evOf(c.curSp))} a round - ${M((c.evOf(c.bestSp)-c.evOf(c.curSp))*10)} over a season.`},
+
+ /* ── 신뢰성 ── */
+ {id:"reliability",u:c=>c.dnfAny>0.20&&c.mcs.find(m=>m[0]==="r")[1]<6?72:0,tone:"warn",
+  ko:c=>`두 대 중 하나라도 멈출 확률이 <b>${pct(c.dnfAny)}</b>다. 리타이어 한 번이면 상금 차액과 수리비로 대략 <b>$5M</b>이 날아간다.
+        신뢰성 1포인트는 지금 <b>${M(c.mcs.find(m=>m[0]==="r")[1])}</b> — 순위표에는 안 보이지만 <b>가장 싼 보험</b>이다.`,
+  en:c=>`There is a <b>${pct(c.dnfAny)}</b> chance at least one car stops. Each retirement costs roughly <b>$5M</b> in lost prize money and repairs.
+        A reliability point costs <b>${M(c.mcs.find(m=>m[0]==="r")[1])}</b> right now. It never shows on the timing screen, but it is the <b>cheapest insurance you can buy</b>.`},
+
+ /* ── 배분 ── */
+ {id:"allocate",u:c=>{const r=c.mcs[2][1]/c.mcs[0][1];return r>1.6?62:0;},tone:"tip",
+  ko:c=>`같은 $1M으로 사는 성능이 항목마다 다르다. <b>${c.mcs[0][2]} ${M(c.mcs[0][1])}</b> vs <b>${c.mcs[2][2]} ${M(c.mcs[2][1])}</b> —
+        ${c.mcs[2][2]}가 <b>${(c.mcs[2][1]/c.mcs[0][1]).toFixed(1)}배</b> 비싸다. 이미 높은 항목은 값이 오른다(한계수확체감).
+        <b>싼 쪽부터</b> 사는 게 같은 돈으로 가장 많은 성능을 얻는 방법이다.`,
+  en:c=>`The same $1M buys different amounts depending on where you spend it: <b>${c.mcs[0][2]} at ${M(c.mcs[0][1])}</b> versus <b>${c.mcs[2][2]} at ${M(c.mcs[2][1])}</b> —
+        <b>${(c.mcs[2][1]/c.mcs[0][1]).toFixed(1)}× more expensive</b>. Whatever is already high costs more to raise (diminishing returns).
+        Buying from the <b>cheapest first</b> gets you the most performance per dollar.`},
+
+ /* ── 비용 상한 ── */
+ {id:"cap",u:c=>c.cap<10?68:0,tone:"warn",
+  ko:c=>`개발에 쓸 수 있는 상한 여유가 <b>${M(Math.max(0,c.cap))}</b>뿐이다. 현금은 ${M(S.cash)} 있어도 <b>규정상 못 쓴다</b>.
+        남은 ${c.left}라운드의 운영비가 이미 상한에 예약돼 있기 때문이다. <b>가진 돈과 쓸 수 있는 돈은 다르다.</b>`,
+  en:c=>`Only <b>${M(Math.max(0,c.cap))}</b> of cost-cap headroom is left for development. You may hold ${M(S.cash)} in cash and still <b>not be allowed to spend it</b>,
+        because running the remaining ${c.left} rounds is already reserved against the cap. <b>Having money and being able to spend it are different things.</b>`},
+
+ /* ── 마케팅 ── */
+ {id:"mktoolate",u:c=>(S.mkList.length&&c.left<=3)?66:0,tone:"warn",
+  ko:c=>`마케팅 <b>${M(mkPlanned())}</b>을 잡아뒀는데 남은 라운드가 <b>${c.left}번</b>뿐이다.
+        브랜드는 이번 라운드에 한 푼도 돌려주지 않고 <b>이후</b> 라운드의 수익을 키운다 — 회수 예상 <b>${M(estPayback())}</b>.
+        지금은 그 돈을 개발에 쓰는 편이 낫다.`,
+  en:c=>`You have <b>${M(mkPlanned())}</b> of marketing queued with only <b>${c.left} rounds</b> left.
+        Brand returns nothing this round; it lifts income in the rounds that <b>follow</b> - projected recovery <b>${M(estPayback())}</b>.
+        That money would do more in development right now.`},
+
+ {id:"mkwindow",u:c=>(!S.mkList.length&&c.left>=7&&S.cash>c.burn*2.5&&S.brand<70)?52:0,tone:"tip",
+  ko:c=>`아직 <b>${c.left}라운드</b>가 남았다. 지금 쓰는 마케팅비는 남은 모든 라운드의 스폰서·머천 수익을 키운다 —
+        브랜드 1점이 라운드당 <b>${M(brandPerRound())}</b>을 벌어오니, 지금이 <b>회수할 시간이 가장 많은</b> 시점이다. 시즌 후반에는 같은 돈을 써도 남지 않는다.`,
+  en:c=>`There are still <b>${c.left} rounds</b> to go. Marketing spent now lifts sponsorship and merchandise income for every one of them —
+        each brand point earns about <b>${M(brandPerRound())}</b> per round, and right now you have <b>the most time to earn it back</b>. Spend the same money late and it never returns.`},
+
+ /* ── 드라이버 ── */
+ {id:"salary",u:c=>c.sal>c.fc*0.45?48:0,tone:"tip",
+  ko:c=>`드라이버 연봉이 <b>${M(c.sal)}</b>로 고정비의 <b>${(c.sal/c.fc*100).toFixed(0)}%</b>다. 이 돈은 우승해도 꼴찌해도 똑같이 나간다.
+        같은 금액이면 에어로를 약 <b>${Math.max(1,Math.round(c.sal/c.mcs[0][1]))}포인트</b> 올릴 수 있다 — 드라이버가 그만큼의 값을 하고 있는지 한 번 따져볼 만하다.`,
+  en:c=>`Driver salaries are <b>${M(c.sal)}</b> — <b>${(c.sal/c.fc*100).toFixed(0)}%</b> of your fixed costs, paid whether you win or finish last.
+        The same money would buy roughly <b>${Math.max(1,Math.round(c.sal/c.mcs[0][1]))} aero points</b>. Worth asking whether the drivers are returning that much.`},
+
+ {id:"aging",u:()=>{const d=S.seats.find(x=>x.age>=30);return d?46:0;},tone:"tip",
+  ko:c=>{const d=S.seats.filter(x=>x.age>=30).sort((a,b)=>b.age-a.age)[0];
+    return `<b>${d.n}</b>이 ${d.age}살이다. 나이가 들수록 시장가치가 떨어진다 — 지금 팔면 <b>${M(sellPrice(d))}</b>이지만
+        다음 시즌엔 한 살 더 먹어 더 낮아진다. <b>자산은 값이 있을 때 파는 것</b>이다. 물론 지금 빠르다면 계속 쓰는 게 맞을 수도 있다.`;},
+  en:c=>{const d=S.seats.filter(x=>x.age>=30).sort((a,b)=>b.age-a.age)[0];
+    return `<b>${d.n}</b> is ${d.age}. Market value falls with age — he would fetch <b>${M(sellPrice(d))}</b> today and less next season, a year older.
+        <b>An asset is sold while it still has value.</b> Though if he is quick right now, keeping him can be the better call.`;}},
+
+ /* ── 순위와 돈 ── */
+ {id:"payout",u:c=>(S.round>=4&&c.pos<10)?42:0,tone:"tip",
+  ko:c=>`지금 <b>P${c.pos}</b>. 시즌 말 배분금이 <b>${M(SEASON_PRIZE[c.pos-1]||9)}</b>인데, 한 계단만 올리면 <b>${M(SEASON_PRIZE[Math.max(0,c.pos-2)])}</b>다 —
+        차이 <b>${M((SEASON_PRIZE[Math.max(0,c.pos-2)]||0)-(SEASON_PRIZE[c.pos-1]||9))}</b>. 순위는 트로피만이 아니라 <b>내년 예산</b>이다.`,
+  en:c=>`You sit <b>P${c.pos}</b>. That pays <b>${M(SEASON_PRIZE[c.pos-1]||9)}</b> at season end; one place higher pays <b>${M(SEASON_PRIZE[Math.max(0,c.pos-2)])}</b> —
+        a <b>${M((SEASON_PRIZE[Math.max(0,c.pos-2)]||0)-(SEASON_PRIZE[c.pos-1]||9))}</b> difference. Position is not just a trophy; it is <b>next year's budget</b>.`},
+
+ {id:"idle",u:c=>(S.devRound===0&&!S.mkList.length&&S.cash>c.burn*4&&c.cap>15)?40:0,tone:"tip",
+  ko:c=>`현금 <b>${M(S.cash)}</b>이 놀고 있다. 라운드당 지출의 <b>${(S.cash/c.burn).toFixed(1)}배</b>다.
+        돈을 쌓아두는 것도 선택이지만, 라이벌은 매 라운드 개발한다 — <b>가만히 있으면 상대적으로 느려진다</b>. 이자수익은 라운드당 ${M(S.cash*0.006)}뿐이다.`,
+  en:c=>`<b>${M(S.cash)}</b> is sitting idle — <b>${(S.cash/c.burn).toFixed(1)}×</b> a round's spending.
+        Hoarding is a valid choice, but rivals develop every round, so <b>standing still means falling behind in relative terms</b>. The interest on that cash is only ${M(S.cash*0.006)} a round.`},
+
+ {id:"titlenear",u:()=>(S.brand>=50&&S.brand<60)?36:0,tone:"tip",
+  ko:c=>`브랜드가 <b>${S.brand.toFixed(0)}</b>이다. <b>60</b>을 넘기면 타이틀 스폰서 제안이 열린다 — 우승하면 ${M(22*c.bm)}짜리 계약이다.
+        마케팅 한 번이면 닿는다. 다만 그 계약은 <b>우승 아니면 0원</b>이니, 우승할 차가 있을 때만 의미가 있다.`,
+  en:c=>`Brand is <b>${S.brand.toFixed(0)}</b>. Cross <b>60</b> and the title sponsor opens up — worth ${M(22*c.bm)} if you win.
+        One marketing push gets you there. But that deal pays <b>nothing without a win</b>, so it only matters if you have a car that can win.`},
+
+ /* ── 기본 ── */
+ {id:"baseline",u:()=>(S.round===0&&S.season===1)?58:5,tone:"tip",
+  ko:c=>`이번 라운드에 최소 <b>${M(c.burn)}</b>이 나간다(고정비 ${M(c.fc)} + 변동비 ${M(c.varC)}${c.interest>0?" + 이자 "+M(c.interest):""}).
+        상금·스폰서·머천으로 그만큼 벌어야 본전이다. 예상 획득 포인트는 <b>${c.est.avgPts.toFixed(1)}점</b>, 포디움 확률 <b>${pct(c.est.podium)}</b> —
+        이 숫자를 올리려면 돈을 써야 하고, 돈을 아끼면 이 숫자가 내려간다. <b>그 사이 어딘가를 고르는 게 네 일이다.</b>`,
+  en:c=>`This round costs at least <b>${M(c.burn)}</b> (fixed ${M(c.fc)} + variable ${M(c.varC)}${c.interest>0?" + interest "+M(c.interest):""}).
+        Prize money, sponsorship and merchandise have to cover that just to break even. You are projected to score <b>${c.est.avgPts.toFixed(1)} points</b> with a <b>${pct(c.est.podium)}</b> podium chance —
+        raising those numbers costs money, and saving money lowers them. <b>Choosing where between the two is your job.</b>`}
+];
+
+function renderCFO(){
+  const c=cfoCtx();
+  const scored=ADVICE.map(a=>({a,u:a.u(c)})).filter(x=>x.u>0).sort((x,y)=>y.u-x.u);
+  if(!scored.length)return "";
+  const main=scored[0], rest=scored.slice(1,3);
+  const body=a=>LANG==="ko"?a.ko(c):LANG==="en"?a.en(c):a.ko(c)+`<span class="en2">${a.en(c)}</span>`;
+  return `<div class="cfo tone-${main.a.tone}">
+    <div class="cfo-h">
+      <div class="cfo-av">MC</div>
+      <div><div class="cfo-n">${Bp("마리사 첸","Marisa Chen")}</div>
+        <div class="cfo-r">${Bp("재무팀장","Chief Financial Officer")}</div></div>
+      <div class="cfo-tag">${main.a.tone==="bad"?Bp("경고","URGENT"):main.a.tone==="good"?Bp("기회","OPPORTUNITY"):Bp("조언","ADVICE")}</div>
+    </div>
+    <div class="cfo-b"><p class="cfo-p">${body(main.a)}</p>
+      ${rest.length?`<div class="cfo-more">${rest.map(x=>
+        `<div class="cfo-sub tone-${x.a.tone}"><span class="cfo-dot"></span><div>${body(x.a)}</div></div>`).join("")}</div>`:""}
+    </div></div>`;
 }
 </script>
 <script>
