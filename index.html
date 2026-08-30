@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pit Wall GP — F1 팀 운영 경제 게임</title>
+<meta name="description" content="F1 팀 대표가 되어 10라운드 시즌을 운영하며 경제를 배우는 게임. 한국어·영어 지원. An F1 team-principal simulation that teaches economics, in Korean and English.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080F24">
+<meta property="og:title" content="Pit Wall GP">
+<meta property="og:description" content="F1 팀을 운영하며 배우는 경제 — 예산 상한, 한계수익, 기대값, 부채와 지분 조달.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%82%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Titillium+Web:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+
+:root{
+  --navy0:#050A18; --navy1:#080F24; --navy2:#0D1631; --navy3:#13203F;
+  --line:#1C2B50; --line2:#2A3D6E;
+  --ink:#EAF0FF; --ink2:#8FA0C6; --dim:#56678F;
+  --red:#E3002B; --yellow:#FFC500; --green:#00D68F; --blue:#4D9BFF;
+  --team:#E3002B; --team2:#FFC500;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:"Saira Condensed","Arial Narrow",Impact,sans-serif;
+  --body:"Titillium Web",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --shadow:0 18px 40px -18px #000A;
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  background:radial-gradient(1100px 620px at 80% -12%,#14224A 0%,transparent 62%),
+             radial-gradient(760px 480px at 4% 8%,#10193A 0%,transparent 58%),var(--navy1);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1260px;margin:0 auto;padding:18px 20px 90px}
+
+h1,h2,h3{font-family:var(--disp);font-weight:800;margin:0;text-wrap:balance}
+h1{font-size:clamp(30px,5.4vw,52px);line-height:.94;text-transform:uppercase}
+h2{font-size:19px;text-transform:uppercase;letter-spacing:.07em}
+h3{font-size:13.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink2);font-weight:700}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2)} .tiny{font-size:12.5px;line-height:1.5}
+.pos{color:var(--green)} .neg{color:var(--red)} .warn{color:var(--yellow)} .acc{color:var(--team)}
+.en2{display:block;font-family:var(--mono);font-size:.70em;letter-spacing:.05em;
+  color:var(--dim);text-transform:none;font-weight:400;line-height:1.35;margin-top:1px}
+.en2.i{display:inline;margin-left:7px;font-size:.78em}
+p .en2{margin-top:5px;font-size:.86em;line-height:1.5;color:#7C8CB4;font-family:var(--body);letter-spacing:0}
+
+/* topbar */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seg button{background:var(--navy2);border:0;color:var(--dim);font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.1em;padding:6px 11px;text-transform:uppercase}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--team);color:#fff}
+.seg button:hover:not(.on){color:var(--ink)}
+.spacer{flex:1}
+
+/* bull mark */
+.bull{display:block}.bull path,.bull circle{fill:currentColor}
+.mast{display:flex;align-items:center;gap:14px}
+.badge{width:52px;height:52px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(150deg,var(--team),var(--team2));
+  clip-path:polygon(12% 0,100% 0,88% 100%,0 100%);color:#fff}
+.badge svg{width:30px;height:23px}
+
+/* hero */
+.hero{padding:20px 0 28px;position:relative;overflow:hidden}
+.hero .ghostbull{position:absolute;right:90px;top:-24px;width:290px;height:218px;
+  color:var(--red);opacity:.11;pointer-events:none}
+@media(max-width:820px){.hero .ghostbull{width:180px;height:135px;right:-30px;opacity:.05}}
+.hero .kicker{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.hero .kicker i{display:block;width:34px;height:2px;background:var(--red)}
+.hero h1{position:relative}.hero h1 .gp{color:var(--red)}
+.hero p.lead{max-width:60ch;color:var(--ink2);font-size:16px;margin:14px 0 0;position:relative}
+
+/* team cards */
+.teams{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:8px 0 20px}
+@media(max-width:900px){.teams{grid-template-columns:1fr}}
+.tc{position:relative;text-align:left;padding:0;overflow:hidden;cursor:pointer;
+  background:linear-gradient(180deg,var(--navy2),var(--navy1));
+  border:1px solid var(--line);border-radius:3px;color:var(--ink);
+  transition:border-color .16s,transform .16s,box-shadow .16s}
+.tc:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--tcol)}
+.tc.on{border-color:var(--tcol);box-shadow:0 0 0 1px var(--tcol),var(--shadow)}
+.tc .liv{height:6px;background:linear-gradient(90deg,var(--tcol) 0 62%,var(--tcol2) 62% 100%)}
+.tc .top{display:flex;align-items:center;gap:11px;padding:14px 15px 10px}
+.tc .em{width:42px;height:42px;flex:none;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(150deg,var(--tcol),var(--tcol2));clip-path:polygon(14% 0,100% 0,86% 100%,0 100%)}
+.tc .em svg{width:25px;height:19px}
+.tc .nm{font-family:var(--disp);font-size:25px;font-weight:800;text-transform:uppercase;line-height:1}
+.tc .tier{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.tc .bd{padding:0 15px 15px}
+.diff{display:flex;align-items:center;gap:7px;padding:7px 11px;margin-bottom:11px;
+  background:#091329;border:1px solid var(--line);border-radius:2px}
+.diff b{font-family:var(--disp);font-size:17px;letter-spacing:.03em}
+.diff .bars{display:flex;gap:3px;margin-left:auto}
+.diff .bars i{width:7px;height:13px;background:#22335C;border-radius:1px}
+.diff .bars i.f{background:var(--tcol)}
+.tc dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:12.5px}
+.tc dt{color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.05em;align-self:center}
+.tc dd{margin:0;text-align:right;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.tc .note{margin:11px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink2);
+  border-top:1px solid var(--line);padding-top:9px}
+.tc .note b{color:var(--ink)}
+
+/* cards */
+.card{background:linear-gradient(180deg,var(--navy2),#0B1329);border:1px solid var(--line);
+  border-radius:3px;margin-bottom:14px;overflow:hidden}
+.card>.hd{display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--navy3),#0D1734)}
+.card>.hd::before{content:"";width:3px;height:15px;background:var(--team);flex:none;transform:skewX(-16deg)}
+.card>.bd{padding:15px}
+.hd .tag{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);
+  text-transform:uppercase;text-align:right}
+.card.won{border-color:var(--team)}
+.card.won>.hd{background:linear-gradient(100deg,var(--team) -30%,var(--navy3) 55%)}
+
+/* game header */
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:16px;
+  border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:0}
+.hteam .nm{font-family:var(--disp);font-size:30px;font-weight:800;text-transform:uppercase;line-height:1}
+.hteam .goal{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.hround{margin-left:auto;display:flex;align-items:center;gap:13px}
+.hround .txt{text-align:right}
+.hround .cn{font-family:var(--disp);font-size:22px;font-weight:700;line-height:1.05;text-transform:uppercase}
+.trackmap{width:94px;height:55px;flex:none}
+.trackmap path{fill:none;stroke:var(--team);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+.trackmap .ghost{stroke:#22335C;stroke-width:8;opacity:.85}
+.trackmap .sf{stroke:var(--ink);stroke-width:3.4;opacity:.85}
+.livbar{height:4px;margin:0 0 14px;background:linear-gradient(90deg,var(--team) 0 46%,var(--team2) 46% 62%,var(--line) 62% 100%)}
+
+/* calendar */
+.cal{display:flex;gap:4px;margin:0 0 16px;overflow-x:auto;padding-bottom:3px}
+.cal .r{flex:1 0 auto;min-width:62px;text-align:center;padding:6px 6px 7px;
+  background:var(--navy2);border:1px solid var(--line);border-radius:2px}
+.cal .r .n{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.1em}
+.cal .r .c{font-family:var(--disp);font-size:12px;font-weight:700;color:var(--ink2);
+  text-transform:uppercase;white-space:nowrap}
+.cal .r .fin{font-family:var(--mono);font-size:9.5px;font-weight:700}
+.cal .r.done{background:var(--navy3)}.cal .r.done .c{color:var(--ink)}
+.cal .r.now{border-color:var(--team);background:linear-gradient(180deg,#1A1030,var(--navy2))}
+.cal .r.now .c{color:#fff}.cal .r.now .n{color:var(--team)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px}
+.stat{background:linear-gradient(180deg,var(--navy2),#0B1329);padding:11px 13px 12px}
+.stat .v{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1.15;margin-top:2px}
+.stat .sub{font-size:10.5px;color:var(--dim);font-family:var(--mono)}
+
+.cols{display:grid;grid-template-columns:1fr 348px;gap:18px;align-items:start}
+@media(max-width:1000px){.cols{grid-template-columns:1fr}}
+
+/* dev */
+.devrow{display:grid;grid-template-columns:88px 1fr auto;gap:12px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--line)}
+.devrow:last-child{border-bottom:0}
+.devrow .nm{font-family:var(--disp);font-size:15px;font-weight:700;text-transform:uppercase}
+.devrow .nm em{display:block;font-family:var(--mono);font-style:normal;font-size:9px;color:var(--dim);letter-spacing:.08em}
+.meter{position:relative;height:9px;background:#070C1C;border:1px solid var(--line);border-radius:1px;overflow:hidden}
+.meter>span{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--team),var(--team2));transition:width .35s}
+.meter.rel>span{background:linear-gradient(90deg,#00795A,var(--green))}
+.meter i{position:absolute;top:-4px;bottom:-4px;width:2px;background:#C8D6F5;box-shadow:0 0 0 1px #070C1C;border-radius:1px}
+.mrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:8px}
+.mrow .val{font-family:var(--mono);font-size:15px;font-weight:700}
+.mrow .mc{font-family:var(--mono);font-size:11px;color:var(--yellow)}
+.buys{display:flex;gap:5px}
+
+button{font-family:var(--body);cursor:pointer}
+.b{background:var(--navy3);border:1px solid var(--line2);color:var(--ink);font-family:var(--mono);
+  font-size:11.5px;font-weight:700;padding:6px 9px;border-radius:2px;transition:background .12s,border-color .12s}
+.b:hover:not(:disabled){background:#1D2C57;border-color:var(--team);color:#fff}
+.b:disabled{opacity:.3;cursor:not-allowed}
+.b:focus-visible,.opt:focus-visible,.go:focus-visible,.tc:focus-visible,.rng:focus-visible,
+summary:focus-visible,input:focus-visible,.seg button:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:block;width:100%;text-align:left;background:#0A1228;border:1px solid var(--line);
+  padding:10px 12px;border-radius:2px;transition:border-color .12s,background .12s;color:var(--ink)}
+.opt:hover:not(:disabled){border-color:var(--line2);background:#0E1734}
+.opt.sel{border-color:var(--team);background:linear-gradient(180deg,#1A0E24,#0A1228)}
+.opt .t{font-family:var(--disp);font-size:15.5px;font-weight:700;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px}
+.opt .t .pay{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--green);text-transform:none}
+.opt .d{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
+.opt:disabled{opacity:.38;cursor:not-allowed}
+
+.go{width:100%;padding:15px;border:0;border-radius:3px;color:#fff;
+  background:linear-gradient(100deg,var(--team) 0%,var(--team) 55%,var(--team2) 160%);
+  font-family:var(--disp);font-size:21px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  transition:filter .12s,transform .06s;box-shadow:var(--shadow)}
+.go:hover:not(:disabled){filter:brightness(1.14)}
+.go:active:not(:disabled){transform:translateY(1px)}
+.go:disabled{filter:grayscale(.9) brightness(.45);cursor:not-allowed;box-shadow:none}
+.go.sec{background:transparent;border:1px solid var(--line2);color:var(--ink);font-size:15px;
+  box-shadow:none;padding:10px}
+.go.sec:hover:not(:disabled){border-color:var(--team);filter:none}
+.go .en2{color:#ffffffb0;letter-spacing:.06em}
+.go.sec .en2{color:var(--dim)}
+
+/* tables */
+table.tt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+table.tt th{text-align:left;font-size:9px;letter-spacing:.14em;color:var(--dim);font-weight:400;
+  padding:0 7px 6px;border-bottom:1px solid var(--line);text-transform:uppercase}
+table.tt td{padding:5px 7px;border-bottom:1px solid #131E3C}
+table.tt tr:last-child td{border-bottom:0}
+table.tt .p{color:var(--dim);width:24px}
+table.tt .tm{font-family:var(--body);font-size:13px}
+table.tt .gap{text-align:right;color:var(--ink2)}
+table.tt .pt{text-align:right;width:36px}
+tr.me td{background:linear-gradient(90deg,#1D0A22,#120C2A)}
+tr.me .tm{color:var(--team);font-weight:700}
+tr.me td:first-child{box-shadow:inset 3px 0 0 var(--team)}
+td.dnf{color:var(--red)}
+.lv{display:inline-block;width:3px;height:11px;margin-right:6px;vertical-align:-1px;border-radius:1px}
+
+/* ledger */
+.pl{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.pl .l{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #131E3C}
+.pl .l.sum{border-top:1px solid var(--line2);border-bottom:0;margin-top:5px;padding-top:8px;font-weight:700;font-size:13.5px}
+.pl .l.ind{padding-left:13px;color:var(--ink2)}
+.pl .l.ind .k::before{content:"└ ";color:var(--dim)}
+.pl .l .k{font-family:var(--body);font-size:13px}
+.pl .l .k .en2{display:inline;margin-left:6px;font-size:10.5px}
+
+/* briefing */
+.brief{border-left:2px solid var(--team);padding:2px 0 2px 14px}
+.brief .en{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--team);text-transform:uppercase}
+.brief .ttl{font-family:var(--disp);font-size:19px;font-weight:800;text-transform:uppercase;color:#fff;line-height:1.1;margin-top:2px}
+.brief p{margin:8px 0 0;font-size:13.5px;color:var(--ink2);line-height:1.62}
+.brief b{color:var(--ink);font-weight:700}
+.brief .new{margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+
+/* concepts */
+.cc{display:flex;flex-direction:column;gap:1px;background:var(--line)}
+.cc details{background:var(--navy2)}
+.cc summary{padding:8px 12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:12.5px}
+.cc summary::-webkit-details-marker{display:none}
+.cc .dot{width:6px;height:6px;border-radius:50%;background:#26365E;flex:none}
+.cc details.on .dot{background:var(--team);box-shadow:0 0 9px var(--team)}
+.cc summary .en{margin-left:auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.cc .body{padding:0 12px 11px;font-size:12px;color:var(--ink2);line-height:1.6}
+.cc .body .en2{font-size:11px;margin-top:6px;color:#7C8CB4;font-family:var(--body);letter-spacing:0}
+
+.pill{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 7px;border:1px solid var(--line2);border-radius:2px;color:var(--ink2)}
+.pill.g{color:var(--green);border-color:#0A6B4C}
+.pill.r{color:var(--red);border-color:#7A0620}
+.pill.y{color:var(--yellow);border-color:#7A5E00}
+.scroll{overflow-x:auto}
+.hide{display:none}
+hr.sep{border:0;border-top:1px solid var(--line);margin:14px 0}
+input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-family:var(--disp);
+  font-size:25px;font-weight:800;text-transform:uppercase;padding:8px 12px;width:100%;border-radius:2px}
+.fine{font-size:12px;color:var(--dim);line-height:1.5}
+.rng{width:100%;-webkit-appearance:none;appearance:none;height:26px;background:transparent;margin:0}
+.rng::-webkit-slider-runnable-track{height:7px;background:#070C1C;border:1px solid var(--line)}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:23px;background:var(--team);border:0;border-radius:2px;margin-top:-9px}
+.rng::-moz-range-track{height:7px;background:#070C1C;border:1px solid var(--line)}
+.rng::-moz-range-thumb{width:15px;height:23px;background:var(--team);border:0;border-radius:2px}
+
+</style>
+<style>
+
+/* ── phase nav ── */
+.phases{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:3px;overflow:hidden;margin-bottom:14px}
+.ph{flex:1;background:var(--navy2);padding:9px 10px;text-align:center;color:var(--dim);
+  font-family:var(--disp);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  border:0;position:relative;transition:background .15s,color .15s}
+.ph .s{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;margin-top:1px}
+.ph.on{background:linear-gradient(180deg,var(--team),#8A0020);color:#fff}
+.ph.done{color:var(--ink2);background:var(--navy3)}
+.ph.done::after{content:"✓";position:absolute;top:4px;right:7px;font-size:10px;color:var(--green)}
+.ph:disabled{cursor:not-allowed}
+
+/* ── drivers ── */
+.drv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.drv{grid-template-columns:1fr}}
+.dcard{background:#0A1228;border:1px solid var(--line);border-radius:2px;padding:11px 12px}
+.dcard.seat{border-left:3px solid var(--team)}
+.dcard .dh{display:flex;align-items:baseline;gap:7px;margin-bottom:7px}
+.dcard .dn{font-family:var(--disp);font-size:18px;font-weight:700;line-height:1}
+.dcard .dno{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:auto}
+.dcard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 8px;margin:0;font-size:12px}
+.dcard dt{color:var(--dim);font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;align-self:center}
+.dcard dd{margin:0;text-align:right;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.sk{position:relative;height:6px;background:#070C1C;border:1px solid var(--line);border-radius:1px;margin-top:6px;overflow:hidden}
+.sk>span{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#2A5FCF,var(--blue))}
+.cond{font-family:var(--mono);font-size:11px;font-weight:700}
+.dacts{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+
+/* ── broadcast ── */
+.bcast{display:grid;grid-template-columns:1fr 300px;gap:14px}
+@media(max-width:900px){.bcast{grid-template-columns:1fr}}
+.lapbar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--navy3);
+  border:1px solid var(--line);border-radius:3px;margin-bottom:12px}
+.lapbar .lc{font-family:var(--disp);font-size:26px;font-weight:800;line-height:1}
+.lapbar .lc small{font-size:14px;color:var(--dim);font-weight:600}
+.lapprog{flex:1;height:5px;background:#070C1C;border:1px solid var(--line);border-radius:1px;overflow:hidden}
+.lapprog>span{display:block;height:100%;background:linear-gradient(90deg,var(--team),var(--team2));transition:width .2s linear}
+.flag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;padding:3px 8px;border-radius:2px;text-transform:uppercase}
+.flag.green{background:#06381F;color:var(--green);border:1px solid #0A6B4C}
+.flag.sc{background:#3D3000;color:var(--yellow);border:1px solid #7A5E00}
+.flag.chk{background:#2A2A2A;color:#fff;border:1px solid #555}
+
+.tower{position:relative;background:#070C1C;border:1px solid var(--line);border-radius:3px;padding:5px 0}
+.trow{position:absolute;left:0;right:0;height:23px;display:grid;
+  grid-template-columns:26px 1fr 62px 30px;align-items:center;gap:6px;padding:0 9px;
+  font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums;
+  transition:transform .28s cubic-bezier(.2,.75,.3,1)}
+.trow .tp{color:var(--dim);text-align:right}
+.trow .tn{font-family:var(--body);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .tg{text-align:right;color:var(--ink2);font-size:10.5px}
+.trow .tx{text-align:right;font-size:9px;letter-spacing:.06em}
+.trow.mine{background:linear-gradient(90deg,#1D0A22,#120C2A00)}
+.trow.mine .tn{color:var(--team);font-weight:700}
+.trow.mine .tp{color:var(--team)}
+.trow.out{opacity:.4}.trow.out .tg{color:var(--red)}
+.trow.up .tp{color:var(--green)}.trow.down .tp{color:var(--red)}
+.trow.pit .tg{color:var(--yellow)}
+@media(prefers-reduced-motion:reduce){.trow{transition:none}}
+
+.feed{background:#070C1C;border:1px solid var(--line);border-radius:3px;height:330px;
+  overflow-y:auto;padding:9px 11px;display:flex;flex-direction:column-reverse}
+.fitem{font-size:12.5px;line-height:1.45;padding:5px 0;border-bottom:1px solid #121C36;color:var(--ink2)}
+.fitem:first-child{border-bottom:0}
+.fitem .lp{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-right:7px;letter-spacing:.06em}
+.fitem b{color:var(--ink);font-weight:700}
+.fitem.big{color:var(--ink)}
+.fitem.ovt b{color:var(--green)}
+.fitem.dnf b{color:var(--red)}
+.fitem.pit b{color:var(--yellow)}
+.fitem.fl b{color:#C77DFF}
+.fitem.mine{background:#150A1F;margin:0 -11px;padding:5px 11px}
+
+.spd{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.spd button{background:var(--navy2);border:0;color:var(--dim);font-family:var(--mono);
+  font-size:9.5px;letter-spacing:.06em;padding:5px 9px;text-transform:uppercase}
+.spd button.on{background:var(--team);color:#fff}
+
+/* ── mobile polish ── */
+@media(max-width:640px){
+  .wrap{padding:14px 13px 70px}
+  .seg button{white-space:nowrap;padding:7px 9px;font-size:10px}
+  #openManual{white-space:nowrap;font-size:11px;padding:7px 10px}
+  .topbar{gap:8px}
+  .ph{font-size:12px;padding:8px 4px;letter-spacing:.02em}
+  .ph .s{font-size:7.5px;letter-spacing:.08em}
+  .stat .v{font-size:18px}
+  header.top{gap:10px}
+  .hteam .nm{font-size:24px}
+  .hround{gap:9px}
+  .trackmap{width:74px;height:44px}
+  .lapbar{flex-wrap:wrap;gap:9px;padding:9px 11px}
+  .lapbar .lc{font-size:22px}
+  .lapprog{order:3;flex-basis:100%}
+  .spd button{padding:5px 7px;font-size:9px}
+  .trow{grid-template-columns:22px 1fr 56px 22px;font-size:10.5px;padding:0 7px}
+  .trow .tn{font-size:11.5px}
+  .feed{height:250px}
+  .devrow{grid-template-columns:70px 1fr;grid-template-areas:"nm mt" "by by";gap:8px 10px}
+  .devrow .nm{grid-area:nm}
+  .devrow>div:nth-child(2){grid-area:mt}
+  .devrow .buys{grid-area:by;justify-content:flex-end}
+  .mbox .mb{padding:13px}
+  .manual{padding:14px 10px 50px}
+  .tc .note{font-size:12px}
+}
+@media(max-width:400px){
+  h1{font-size:30px}
+  .opt .t{font-size:14.5px;flex-wrap:wrap}
+  .opt .t .pay{margin-left:0;flex-basis:100%}
+}
+
+/* ── manual ── */
+.manual{position:fixed;inset:0;background:#040814F2;backdrop-filter:blur(3px);z-index:50;
+  overflow-y:auto;padding:26px 18px 60px}
+.mbox{max-width:900px;margin:0 auto;background:var(--navy2);border:1px solid var(--line2);border-radius:4px}
+.mbox .mh{position:sticky;top:0;display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:linear-gradient(180deg,var(--navy3),#0D1734);border-bottom:1px solid var(--line);z-index:2}
+.mbox .mb{padding:18px}
+.msec{margin-bottom:22px}
+.msec>h3{margin-bottom:9px;color:var(--team)}
+.msec p{margin:0 0 9px;font-size:13.5px;color:var(--ink2);line-height:1.6}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+.mitem{background:#0A1228;border:1px solid var(--line);border-radius:2px;padding:10px 12px}
+.mitem .mt{font-family:var(--disp);font-size:15px;font-weight:700;text-transform:uppercase}
+.mitem .mv{font-family:var(--mono);font-size:11.5px;color:var(--yellow);margin:2px 0 5px}
+.mitem .md{font-size:12px;color:var(--ink2);line-height:1.5}
+.mitem .md .en2{font-size:11px;font-family:var(--body);letter-spacing:0;margin-top:5px}
+.close{margin-left:auto;background:var(--navy3);border:1px solid var(--line2);color:var(--ink);
+  font-family:var(--mono);font-size:11px;padding:6px 12px;border-radius:2px}
+
+</style>
+</head>
+<body>
+<svg style="display:none">
+  <symbol id="bull" viewBox="0 0 64 48">
+    <path d="M32 46.5c-10.2 0-18-8.2-18-18.6v-5.4l-6.1-4C3.6 15.4 1.6 10 2.6 5.2c5.3 2 10 5.2 13.3 9.4l3.9-2C23.6 10.8 27.7 9.8 32 9.8s8.4 1 12.2 2.8l3.9 2c3.3-4.2 8-7.4 13.3-9.4 1 4.8-1 10.2-5.3 13.3l-6.1 4v5.4c0 10.4-7.8 18.6-18 18.6z"/>
+    <circle cx="23.6" cy="26" r="2.9"/><circle cx="40.4" cy="26" r="2.9"/>
+    <path d="M27.6 36h8.8l-2.2 4.6h-4.4z"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="seg" id="langseg">
+      <button data-lang="both" class="on">한 + EN</button>
+      <button data-lang="ko">한국어</button>
+      <button data-lang="en">English</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="b" id="openManual">📖 설명서 / Manual</button>
+  </div>
+
+<!-- ════ TEAM SELECT ════ -->
+<section id="select">
+  <div class="hero">
+    <svg class="ghostbull bull" aria-hidden="true"><use href="#bull"/></svg>
+    <div class="kicker"><i></i><span class="lbl">Team Principal Simulator · Season 1</span></div>
+    <h1>Pit Wall <span class="gp">GP</span></h1>
+    <p class="lead" id="heroLead"></p>
+  </div>
+  <div id="selLbl"></div>
+  <div class="teams" id="teams"></div>
+  <div class="cols">
+    <div class="card">
+      <div class="hd"><h2 id="nameHd"></h2><span class="tag">Naming</span></div>
+      <div class="bd">
+        <input class="tn" id="tname" maxlength="18" aria-label="Team name">
+        <div style="margin-top:13px"><button class="go" id="start" disabled></button></div>
+        <p class="fine" id="selFine" style="margin:11px 0 0"></p>
+      </div>
+    </div>
+    <aside class="card">
+      <div class="hd"><h3 id="learnHd"></h3><span class="tag">10 Concepts</span></div>
+      <div class="bd" id="learnBody"></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ════ GAME ════ -->
+<section id="game" class="hide">
+  <header class="top">
+    <div class="mast">
+      <div class="badge"><svg class="bull"><use href="#bull"/></svg></div>
+      <div class="hteam">
+        <div class="nm" id="teamName">—</div>
+        <div class="goal" id="teamGoal">—</div>
+      </div>
+    </div>
+    <div class="hround">
+      <div class="txt">
+        <div class="lbl" id="roundlbl">ROUND 1 / 10</div>
+        <div class="cn" id="circuitName">BAHRAIN</div>
+      </div>
+      <svg class="trackmap" id="trackmap" viewBox="0 0 120 70" aria-hidden="true"></svg>
+    </div>
+  </header>
+  <div class="livbar"></div>
+  <div class="cal" id="cal"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="phases" id="phases"></div>
+
+  <div class="cols">
+    <div>
+      <div id="pPaddock"></div>
+      <div id="pPractice" class="hide"></div>
+      <div id="pQuali" class="hide"></div>
+      <div id="pRace" class="hide"></div>
+      <div id="pResult" class="hide"></div>
+      <div id="pFinish" class="hide"></div>
+    </div>
+    <aside id="side"></aside>
+  </div>
+</section>
+</div>
+
+<div class="manual hide" id="manual"><div class="mbox">
+  <div class="mh"><h2 id="manHd">설명서</h2><button class="close" id="closeManual">닫기 / Close</button></div>
+  <div class="mb" id="manBody"></div>
+</div></div>
+<script>
+"use strict";
+/* ═════════ 상수 (밸런스 검증 완료) ═════════ */
+const ROUNDS=10;
+const CIRCUITS=[
+ {n:"BAHRAIN",     laps:57,t:"M24 52V28Q24 20 32 20H56Q64 20 64 28V36Q64 42 70 42H92Q102 42 102 50Q102 58 92 58H34Q24 58 24 52Z"},
+ {n:"JEDDAH",      laps:50,t:"M18 56V22Q18 14 26 14H44L52 22H78Q88 22 92 30L100 46Q102 54 94 56Z"},
+ {n:"MELBOURNE",   laps:58,t:"M26 50Q18 40 24 30Q30 20 44 18H74Q88 18 92 28Q96 38 86 44L60 52Q40 58 26 50Z"},
+ {n:"SUZUKA",      laps:53,t:"M20 46Q26 22 48 20Q66 18 72 30Q78 42 62 46Q46 50 44 38Q42 26 58 24H84Q98 24 98 38Q98 52 84 54H34Q20 54 20 46Z"},
+ {n:"MIAMI",       laps:57,t:"M20 52V30Q20 20 32 20H70Q84 20 88 30L96 48Q100 56 90 56H34Q20 56 20 52Z"},
+ {n:"MONACO",      laps:78,t:"M26 56V34Q26 24 36 22L52 18Q62 16 66 24L70 34Q74 42 84 42H92Q100 42 98 50L94 56Z"},
+ {n:"SILVERSTONE", laps:52,t:"M18 44Q22 24 42 20H72Q88 20 94 32Q100 44 88 50L64 56Q40 60 26 54Q16 50 18 44Z"},
+ {n:"SPA",         laps:44,t:"M16 50L24 22Q26 16 34 18L56 26Q66 30 76 26L94 20Q102 18 102 26L100 46Q98 54 88 54H26Q14 54 16 50Z"},
+ {n:"MONZA",       laps:53,t:"M20 54V20Q20 14 28 16L86 30Q96 32 96 40V50Q96 56 88 56H28Q20 56 20 54Z"},
+ {n:"ABU DHABI",   laps:58,t:"M22 50V30Q22 20 34 20H62Q72 20 74 28L78 40Q80 46 88 46H94Q102 46 100 54L96 58H32Q22 58 22 50Z"}];
+
+const PTS=[25,18,15,12,10,8,6,4,2,1];
+const FL_PT=1;
+const PRIZE=[7.0,5.8,5.0,4.4,3.9,3.4,3.0,2.6,2.3,2.0,1.7,1.5,1.3,1.15,1.0,0.9,0.8,0.7,0.6,0.5];
+const DNF_PRIZE=0.8;
+const CAP=135.0, FIXED_CAP=4.5, VAR_EST=3.4;
+const LOAN_RATE=0.04, LOAN_MAX=30, EQ_CASH=25, EQ_SHARE=0.25;
+
+const TEAMS={
+ halcyon:{key:"halcyon",n:"HALCYON",col:"#FF6B00",col2:"#FFB100",diff:1,
+   tier:["언더독","UNDERDOG"],car:{a:46,p:44,r:62},cash:38,baseFixed:2.0,spMult:0.85,brand:25,target:6,
+   d:[{n:"R. Okafor",s:60,c:.55,sal:0.7,age:24},{n:"T. Lindqvist",s:54,c:.45,sal:0.5,age:21}],
+   note:["차도 돈도 팬도 없다. 대신 고정비가 <b>$2.0M뿐</b>이라 조금만 벌어도 버틴다. 개발비도 싸다 — <b>투자하면 그대로 순위가 오른다.</b> 처음 시작하기 가장 좋은 팀.",
+         "No car, no money, no fans. But fixed costs are only <b>$2.0M</b>, so you survive on little. Upgrades are cheap too - <b>invest and you climb.</b> The best team to learn on."]},
+ meridian:{key:"meridian",n:"MERIDIAN",col:"#00A88F",col2:"#C9D6E4",diff:2,
+   tier:["중위권 강호","ESTABLISHED MIDFIELD"],car:{a:52,p:50,r:70},cash:40,baseFixed:7.0,spMult:1.00,brand:40,target:4,
+   d:[{n:"D. Moreau",s:68,c:.70,sal:1.6,age:29},{n:"K. Sato",s:62,c:.62,sal:1.2,age:26}],
+   note:["모든 게 평균이다. 개발·마케팅·자금 조달 <b>어느 쪽으로도 갈 수 있다.</b> 여기서는 <b>대출이 도움이 된다</b> — 빌려서 차를 키우면 상금으로 갚을 수 있다.",
+         "Everything average. You can go any direction - R&D, marketing, or financing. Here <b>borrowing pays off</b>: build the car early and prize money repays the loan."]},
+ apex:{key:"apex",n:"APEX BULLS",col:"#E3002B",col2:"#FFC500",diff:3,
+   tier:["우승 후보","CHAMPIONSHIP CONTENDER"],car:{a:62,p:60,r:78},cash:45,baseFixed:14.5,spMult:1.15,brand:60,target:1,
+   d:[{n:"M. Verhaal",s:84,c:.88,sal:4.2,age:27},{n:"L. Pérez-Ruiz",s:76,c:.72,sal:2.8,age:31}],
+   note:["최고의 차와 최고의 드라이버. 하지만 고정비가 <b>라운드당 $21.5M</b>이고 목표는 오직 우승이다. 여기서 <b>대출은 자살행위다</b> — 현금을 지키는 팀만 살아남는다.",
+         "Best car, best drivers. But fixed costs run <b>$21.5M per round</b> and only the title counts. Here <b>borrowing is suicide</b> - only teams that guard their cash survive."]}};
+
+const RIVALS=[
+ {n:"Northstar",cp:50,c:"#1E5BC6",d:[["A. Halvorsen",88],["J. Whitlock",80]]},
+ {n:"Volante",  cp:48,c:"#8E44C9",d:[["E. Rossi",84],["N. Duval",76]]},
+ {n:"Kestrel",  cp:46,c:"#C9A227",d:[["S. Bergmann",78],["P. Okonkwo",72]]},
+ {n:"Ardent",   cp:44,c:"#2FA84F",d:[["H. Tanaka",74],["V. Cruz",68]]},
+ {n:"Onyx",     cp:42,c:"#D2553C",d:[["M. Kovac",70],["B. Aslan",64]]},
+ {n:"Basalt",   cp:40,c:"#4C6EF5",d:[["G. Fontaine",66],["I. Petrov",60]]},
+ {n:"Corvid",   cp:38,c:"#7A8699",d:[["Y. Choi",62],["F. Almeida",56]]},
+ {n:"Sable",    cp:36,c:"#C77DBB",d:[["L. Novak",58],["D. Mbeki",52]]},
+ {n:"Lumen",    cp:34,c:"#3AA6A6",d:[["C. Iversen",54],["R. Haddad",48]]}];
+const rivalGrowth=t=>0.85-t*0.075;
+
+const SPONSORS=[
+ {id:"safe",t:["안정형 계약","Guaranteed deal"],base:4.5,bonus:0,need:0,
+  d:["결과와 무관하게 확정 지급. 브랜드 지수에 비례해 늘어난다.",
+     "Paid regardless of result. Scales with your brand index."]},
+ {id:"perf",t:["성과형 계약","Performance deal"],base:1.0,bonus:8.5,need:3,
+  d:["기본은 적다. 포디움(3위 이내)에 들면 큰 보너스.",
+     "Small base. Big bonus if either car finishes on the podium (top 3)."]},
+ {id:"title",t:["타이틀 스폰서","Title sponsor"],base:0,bonus:22.0,need:1,brandNeed:60,
+  d:["우승 아니면 0원. 브랜드 60 이상에서만 제안이 온다.",
+     "Nothing unless you win. Only offered at brand 60 or above."]}];
+
+const STRATS=[
+ {id:"cons",t:["보수 전략","Conservative"],pace:-2.0,risk:.55,cost:.8,
+  d:["타이어를 아낀다. 페이스 −2.0, 리타이어 확률 45% 감소","Save the tyres. Pace −2.0, retirement risk down 45%"]},
+ {id:"bal",t:["균형 전략","Balanced"],pace:0,risk:1,cost:1.4,
+  d:["표준 운영","Standard operation"]},
+ {id:"aggr",t:["공격 전략","Aggressive"],pace:4.5,risk:1.9,cost:2.6,
+  d:["한계까지 밀어붙인다. 페이스 +4.5, 리타이어 확률 90% 증가","Push to the limit. Pace +4.5, retirement risk up 90%"]}];
+
+const CHANNELS=[
+ {id:"social",t:["소셜·유튜브 채널","Social / YouTube"],cost:2,gain:3.0,decay:.30,need:0,
+  d:["가장 싸고 효율이 좋다. 하지만 <b>반복할수록 효과가 급격히 떨어진다</b> — 같은 사람들에게 계속 광고하는 셈이다.",
+     "Cheapest and most efficient. But repeats <b>lose effect fast</b> - you keep reaching the same people."]},
+ {id:"fanzone",t:["팬미팅·팬존 운영","Fan zone / meet-ups"],cost:4,gain:3.6,decay:.10,need:0,form:true,
+  d:["효과가 <b>최근 성적에 좌우된다.</b> 포디움 직후면 1.5배, 하위권이면 0.7배. 잘 나갈 때 써야 하는 채널.",
+     "Effect depends on <b>recent results</b>: 1.5x right after a podium, 0.7x when you're at the back. Spend it when you're winning."]},
+ {id:"docu",t:["다큐멘터리 출연","Documentary series"],cost:9,gain:11.0,decay:.99,need:45,
+  d:["<b>시즌에 한 번</b>만 가능. 브랜드 45 이상이어야 제안이 온다. 한 방이 크다.",
+     "<b>Once per season</b> only, and only offered at brand 45+. One big hit."]},
+ {id:"global",t:["글로벌 광고 캠페인","Global ad campaign"],cost:14,gain:11.0,decay:.05,need:0,
+  d:["가장 비싸고 효율은 낮다. 대신 <b>조건이 없고 몇 번이든 반복</b>할 수 있다. 돈이 남을 때의 선택지.",
+     "Most expensive, least efficient. But <b>no conditions and repeatable</b>. The option when you have cash to spare."]}];
+
+const FREE_AGENTS=[
+ {n:"A. Vasquez",s:82,c:.84,sal:3.6,age:28},{n:"O. Brennan",s:75,c:.70,sal:2.4,age:25},
+ {n:"Z. Nakamura",s:71,c:.76,sal:1.9,age:33},{n:"P. Lindgren",s:67,c:.60,sal:1.4,age:23},
+ {n:"M. Diallo",s:64,c:.68,sal:1.1,age:30},{n:"J. Ferreira",s:59,c:.52,sal:0.8,age:22}];
+const ACADEMY_POOL=[
+ {n:"E. Kaminski",s:46,c:.40,sal:0.25,age:19},{n:"S. Adeyemi",s:44,c:.46,sal:0.25,age:18},
+ {n:"W. Bauer",s:49,c:.38,sal:0.3,age:20}];
+
+const DNF_REASONS=[["엔진 블로우","engine failure"],["기어박스 고장","gearbox failure"],
+ ["유압 계통 이상","hydraulics"],["브레이크 과열","brake failure"],["접촉 사고","collision damage"],
+ ["파워유닛 이상","power unit failure"]];
+
+const CONCEPTS={
+ scarcity:{k:["희소성과 예산 제약","Scarcity"],
+  b:["원하는 건 많고 돈은 한정돼 있다. FIA 비용 상한 $135M은 '돈을 더 쓰면 이긴다'를 막는 규칙이다. 모든 경제학은 이 한 문장에서 출발한다 — <b>자원은 부족하다.</b>",
+     "You want many things; money is limited. The FIA's $135M cost cap stops teams from simply outspending everyone. All of economics starts here: <b>resources are scarce.</b>"]},
+ opp:{k:["기회비용","Opportunity Cost"],
+  b:["에어로에 $10M을 쓰면 그 돈으로 살 수 있었던 마케팅·신뢰성·드라이버를 포기한 것이다. 어떤 선택의 진짜 값은 가격표가 아니라 <b>포기한 차선책</b>이다.",
+     "Spend $10M on aero and you gave up the marketing, reliability, or driver it could have bought. The real cost of a choice is <b>the best thing you gave up</b>, not the price tag."]},
+ dim:{k:["한계수확체감","Diminishing Returns"],
+  b:["같은 것에 계속 투자하면 추가 1단위가 주는 효과가 줄어든다. 에어로 50에서 1포인트는 $1.0M이지만 80에서는 $5.0M이다. <b>잘하는 걸 더 잘하는 건 갈수록 비싸다.</b>",
+     "Keep investing in the same thing and each extra unit gives less. One aero point costs $1.0M at 50 but $5.0M at 80. <b>Getting better at what you're already good at gets expensive.</b>"]},
+ fixvar:{k:["고정비와 변동비","Fixed vs Variable Cost"],
+  b:["고정비는 우승해도 꼴찌해도 똑같이 나간다 — 드라이버 연봉, 팩토리 임대료, 직원 급여, 물류. 변동비는 활동량에 따라 변한다 — 타이어, 부품, 사고 수리비. <b>고정비가 큰 팀은 성적이 나쁠 때 훨씬 빨리 무너진다.</b>",
+     "Fixed costs are the same whether you win or finish last - driver salaries, factory lease, staff, freight. Variable costs move with activity - tyres, parts, crash repairs. <b>A team with high fixed costs collapses much faster when results go bad.</b>"]},
+ ev:{k:["기대값","Expected Value"],
+  b:["계약의 값어치 = 확률 × 보상. 포디움 확률이 30%라면 성과형은 $1.0M + 0.3 × $8.5M = $3.55M. 안정형 $4.5M보다 낮다. <b>느낌이 아니라 곱셈으로</b> 고르는 것이다.",
+     "Value of a deal = probability × payoff. At a 30% podium chance the performance deal is worth $1.0M + 0.3 × $8.5M = $3.55M - less than the $4.5M guaranteed deal. <b>Choose by multiplying, not by feeling.</b>"]},
+ risk:{k:["리스크와 수익의 교환","Risk-Return Tradeoff"],
+  b:["공격 전략은 평균 순위를 올리지만 결과의 흔들림도 키운다. 높은 기대수익에는 <b>항상</b> 높은 변동성이 붙는다. 공짜 수익은 없다.",
+     "Aggressive strategy raises your average finish but also the spread of outcomes. Higher expected return <b>always</b> comes with higher volatility. There is no free return."]},
+ roi:{k:["투자수익률","Return on Investment"],
+  b:["쓴 돈이 얼마를 벌어왔는가. 개발비 $40M으로 30포인트를 얻었다면 1포인트당 $1.33M이다. 절대 금액이 아니라 <b>단위당 얼마</b>를 봐야 잘 쓴 돈인지 알 수 있다.",
+     "How much did your spending earn back? $40M of R&D for 30 points is $1.33M per point. Judge spending by <b>cost per unit of result</b>, not by the total."]},
+ fund:{k:["부채와 지분 조달","Debt vs Equity"],
+  b:["대출은 잘하든 못하든 이자가 같다 — 성공하면 싼 돈, 실패하면 목을 조르는 돈이다. 지분 투자는 갚을 의무가 없지만 <b>성공할수록 비싸진다</b>(상금의 25%를 영원히 준다). <b>어떤 돈에도 조건이 붙는다.</b>",
+     "A loan charges the same interest whether you win or lose - cheap money if you succeed, a noose if you don't. Equity never has to be repaid but <b>gets more expensive the better you do</b> (25% of prize money, forever). <b>No money comes free.</b>"]},
+ brand:{k:["브랜드 자산과 회수기간","Brand Equity & Payback"],
+  b:["마케팅비는 이번 라운드에 한 푼도 돌려주지 않는다. 브랜드를 쌓아 <b>이후 모든 라운드</b>의 스폰서·머천 수익을 키운다. 남은 라운드가 적으면 회수할 시간이 없어 그냥 손해다.",
+     "Marketing returns nothing this round. It builds brand, which lifts sponsor and merchandise income in <b>every round that follows</b>. Spend it late and there's no time left to earn it back."]},
+ comp:{k:["경쟁과 상대성과","Competition"],
+  b:["라이벌도 매주 개발한다 — 그리고 <b>상위 팀일수록 더 빨리</b> 개발한다. 네 차가 좋아져도 남들이 더 좋아지면 순위는 떨어진다. 중요한 건 절대 성능이 아니라 <b>상대 성능</b>이다.",
+     "Rivals develop every week too - and <b>the stronger they are, the faster they develop</b>. Your car can improve while your position falls. What matters is <b>relative</b> performance, not absolute."]},
+ human:{k:["인적자본 투자","Human Capital"],
+  b:["드라이버는 비용이자 자산이다. 스타를 사면 즉시 빨라지지만 <b>연봉은 고정비</b>가 되어 매 라운드 목을 조른다. 유망주를 키우면 싸지만 <b>시간이 걸린다.</b> 사람에 대한 투자도 다른 투자와 똑같은 계산이다.",
+     "Drivers are both a cost and an asset. A star makes you fast now, but the salary becomes a <b>fixed cost</b> squeezing every round. A junior is cheap but <b>takes time</b> to develop. Investing in people follows the same maths as anything else."]}};
+
+/* ═════════ 이중언어 헬퍼 ═════════ */
+let LANG="both";
+const B=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2">${en}</span>`;
+const Bi=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2 i">${en}</span>`;
+const Bp=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko} · ${en}`;
+const P=(ko,en)=>LANG==="ko"?ko:LANG==="en"?en:`${ko}<span class="en2">${en}</span>`;
+const M=n=>(n<0?"−$":"$")+Math.abs(n).toFixed(1)+"M";
+const $=id=>document.getElementById(id);
+</script>
+<script>
+/* ═════════ 상태 ═════════ */
+let S=null, picked=null, RACE=null;
+const KEY="pitwallgp.v3";
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+const loadS=()=>{try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;}};
+const wipe=()=>{try{localStorage.removeItem(KEY);}catch(e){}};
+
+function newState(tk,name){
+  const T=TEAMS[tk];
+  return{tk,name:name||T.n,round:0,phase:"paddock",
+    cash:T.cash,debt:0,equitySold:false,brand:T.brand,
+    a:T.car.a,p:T.car.p,rel:T.car.r,points:0,capUsed:0,
+    seats:T.d.map((d,i)=>({...d,no:i+1,pts:0,cond:1,practiced:0})),
+    academy:[{...ACADEMY_POOL[Math.floor(Math.random()*ACADEMY_POOL.length)]}],
+    market:shuffle(FREE_AGENTS).slice(0,3).map(d=>({...d})),
+    chanUsed:{social:0,fanzone:0,docu:0,global:0},
+    devRound:0,mkRound:0,mkList:[],practiceSpend:0,qMode:"bal",practiceDone:false,
+    sponsor:"safe",strat:"bal",lastBest:20,
+    rivals:RIVALS.map((r,i)=>({n:r.n,cp:r.cp,c:r.c,tier:i,pts:0,
+      d:r.d.map(x=>({n:x[0],s:x[1]}))})),
+    ledger:{prize:0,spon:0,merch:0,ie:0,dev:0,mk:0,fixBase:0,fixSal:0,
+            varTyre:0,varRepair:0,varPractice:0,ip:0,eq:0,severance:0},
+    results:[],concepts:{},lastResult:null,over:false,grid:null};
+}
+function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+const T=()=>TEAMS[S.tk];
+
+/* ═════════ 경제 모델 ═════════ */
+const mcA=v=>1.00*Math.pow(1.055,v-50);
+const mcP=v=>1.00*Math.pow(1.055,v-50);
+const mcR=v=>0.90*Math.pow(1.075,v-70);
+const mcOf=k=>k==="a"?mcA(S.a):k==="p"?mcP(S.p):mcR(S.rel);
+const carPerf=()=>0.42*S.a+0.38*S.p;
+const salaries=()=>S.seats.reduce((x,d)=>x+d.sal,0)+S.academy.reduce((x,d)=>x+d.sal,0);
+const fixedCost=()=>T().baseFixed+salaries();
+const brandMult=()=>(0.50+S.brand/70)*T().spMult;
+const merchRev=best=>S.brand/100*9.0+(best&&best<99?Math.max(0,11-best)*0.25:0);
+const chanGain=id=>{const C=CHANNELS.find(c=>c.id===id);
+  let e=Math.max(.20,1-S.chanUsed[id]*C.decay);
+  if(C.form)e*=S.lastBest<=3?1.5:S.lastBest<=8?1.1:0.7;
+  return C.gain*e*(1-S.brand/120);};
+const capLeft=()=>CAP-S.capUsed;
+const capAvail=()=>CAP-S.capUsed-(ROUNDS-S.round)*(FIXED_CAP+VAR_EST);
+const netWorth=()=>S.cash-S.debt;
+const stratOf=()=>STRATS.find(x=>x.id===S.strat);
+const dnfProb=st=>(100-S.rel)/100*0.30*st.risk;
+const brandPerRound=()=>(9.0/100)+(4.5*T().spMult/70);
+const mkPlanned=()=>S.mkList.reduce((x,id)=>x+CHANNELS.find(c=>c.id===id).cost,0);
+
+function standings(){
+  const a=S.rivals.map(r=>({n:r.n,pts:r.pts,c:r.c,me:false}));
+  a.push({n:S.name,pts:S.points,c:T().col,me:true});
+  a.sort((x,y)=>y.pts-x.pts||(x.me?-1:1));return a;}
+const myPos=()=>standings().findIndex(t=>t.me)+1;
+
+function driverStandings(){
+  const a=[];
+  S.seats.forEach(d=>a.push({n:d.n,t:S.name,c:T().col,pts:d.pts,me:true}));
+  S.rivals.forEach(r=>r.d.forEach(d=>a.push({n:d.n,t:r.n,c:r.c,pts:d.pts||0,me:false})));
+  a.sort((x,y)=>y.pts-x.pts);return a;}
+
+/* ═════════ 주말 진행 ═════════ */
+function runPractice(){
+  S.seats.forEach(d=>{
+    const base=0.90+Math.random()*0.20;
+    d.cond=Math.min(1.14,base+(S.practiceSpend>0?0.035:0));
+  });
+  if(S.practiceSpend>0)S.academy.forEach(d=>{d.s=Math.min(78,d.s+1.2);});
+  S.academy.forEach(d=>{d.s=Math.min(78,d.s+0.8);});
+  S.practiceDone=true; save();
+}
+
+function buildEntries(){
+  const st=stratOf(), cars=[];
+  S.seats.forEach((d,i)=>cars.push({
+    id:"me"+i,team:S.name,col:T().col,me:true,seat:i,name:d.n,
+    perf:carPerf()+0.20*d.s*d.cond+st.pace+(Math.random()*6-3),
+    cons:d.c,relv:S.rel,risk:st.risk}));
+  S.rivals.forEach(r=>r.d.forEach((d,i)=>cars.push({
+    id:r.n+i,team:r.n,col:r.c,me:false,name:d.n,
+    perf:r.cp+0.20*d.s*(0.92+Math.random()*0.16)+(Math.random()*6-3),
+    cons:.55+Math.random()*.3,relv:88,risk:1})));
+  return cars;
+}
+
+function runQuali(){
+  const cars=buildEntries();
+  const qBonus=S.qMode==="push"?1.8:S.qMode==="save"?-1.2:0;
+  const qRisk =S.qMode==="push"?0.10:0;
+  cars.forEach(c=>{
+    let q=c.perf+(Math.random()*3-1.5);
+    if(c.me){q+=qBonus; if(Math.random()<qRisk){q-=9;c.qLost=true;}}
+    c.q=q;});
+  cars.sort((x,y)=>y.q-x.q);
+  cars.forEach((c,i)=>c.grid=i+1);
+  S.grid=cars.map(c=>({id:c.id,team:c.team,col:c.col,me:c.me,seat:c.seat,name:c.name,
+    perf:c.perf,cons:c.cons,relv:c.relv,risk:c.risk,grid:c.grid,qLost:!!c.qLost}));
+  save();
+  return S.grid;
+}
+
+/* ── 랩 바이 랩 레이스 엔진 ── */
+function initRace(){
+  const laps=CIRCUITS[S.round].laps;
+  const cars=S.grid.map(g=>{
+    const stops=Math.random()<0.35?2:1;
+    const pit=[];
+    if(stops===1)pit.push(Math.round(laps*(0.42+Math.random()*0.16)));
+    else{pit.push(Math.round(laps*(0.28+Math.random()*0.08)));
+         pit.push(Math.round(laps*(0.62+Math.random()*0.10)));}
+    return{...g,time:g.grid*0.32,pos:g.grid,prev:g.grid,out:false,dnfLap:0,
+      pit,inPit:false,best:999,reason:null,
+      dnfAt: Math.random()<((100-g.relv)/100*0.30*g.risk)
+             ? 2+Math.floor(Math.random()*(laps-4)) : 0};
+  });
+  RACE={laps,lap:0,cars,feed:[],fastest:{t:999,id:null},sc:0,done:false};
+  return RACE;
+}
+
+function stepLap(){
+  const R=RACE; if(R.done)return;
+  R.lap++;
+  const ev=[];
+  if(R.lap===1)ev.push({k:"big",ko:"라이트 아웃! 레이스 시작입니다.",en:"Lights out - and away we go!"});
+
+  // 세이프티카 (라운드당 최대 1회)
+  if(!R.scUsed&&R.lap>4&&R.lap<R.laps-6&&Math.random()<0.018){
+    R.sc=3;R.scUsed=true;
+    ev.push({k:"sc",ko:"세이프티카 출동 — 필드가 압축됩니다.",en:"Safety car deployed - the field bunches up."});
+  }
+
+  R.cars.forEach(c=>{
+    if(c.out)return;
+    if(c.dnfAt===R.lap){
+      c.out=true;c.dnfLap=R.lap;
+      c.reason=DNF_REASONS[Math.floor(Math.random()*DNF_REASONS.length)];
+      ev.push({k:"dnf",me:c.me,ko:`<b>${c.name}</b> 리타이어 — ${c.reason[0]}.`,
+        en:`<b>${c.name}</b> retires - ${c.reason[1]}.`});
+      c.time+=99999;return;
+    }
+    let lt=92-c.perf*0.055+(Math.random()*1.5-0.55)*(1.5-c.cons);
+    if(R.sc>0)lt=95.5+Math.random()*0.3;
+    c.inPit=false;
+    if(c.pit.includes(R.lap)&&R.sc===0){lt+=21.5+Math.random()*1.4;c.inPit=true;
+      if(c.me)ev.push({k:"pit",me:true,ko:`<b>${c.name}</b> 피트인 — 타이어 교체.`,
+        en:`<b>${c.name}</b> pits for fresh tyres.`});}
+    if(!c.inPit&&R.sc===0&&lt<c.best){c.best=lt;
+      if(lt<R.fastest.t){R.fastest={t:lt,id:c.id,name:c.name,me:c.me};
+        if(R.lap>3)ev.push({k:"fl",me:c.me,ko:`<b>${c.name}</b> 패스티스트랩 ${lt.toFixed(2)}s`,
+          en:`<b>${c.name}</b> sets the fastest lap, ${lt.toFixed(2)}s`});}}
+    c.time+=lt;
+  });
+  if(R.sc>0)R.sc--;
+
+  const live=R.cars.filter(c=>!c.out).sort((a,b)=>a.time-b.time);
+  const out =R.cars.filter(c=>c.out).sort((a,b)=>b.dnfLap-a.dnfLap);
+  live.forEach((c,i)=>{c.prev=c.pos;c.pos=i+1;});
+  out.forEach((c,i)=>{c.prev=c.pos;c.pos=live.length+i+1;});
+
+  // 추월 코멘터리 (내 차 우선, 라운드당 과하지 않게)
+  const moves=live.filter(c=>c.pos<c.prev&&!c.inPit);
+  const pick=moves.find(c=>c.me)||(R.lap%3===0?moves[0]:null);
+  if(pick&&R.lap>1){
+    const passed=live.find(c=>c.pos===pick.pos+1);
+    if(passed)ev.push({k:"ovt",me:pick.me,
+      ko:`<b>${pick.name}</b> — ${passed.name} 추월, <b>P${pick.pos}</b>!`,
+      en:`<b>${pick.name}</b> passes ${passed.name} for <b>P${pick.pos}</b>!`});
+  }
+  if(R.lap===R.laps-1)ev.push({k:"big",ko:"마지막 랩입니다.",en:"Final lap."});
+  if(R.lap>=R.laps){
+    R.done=true;
+    const w=live[0];
+    ev.push({k:"big",ko:`체커기! <b>${w?w.name:"—"}</b> 우승.`,en:`Chequered flag! <b>${w?w.name:"-"}</b> takes the win.`});
+  }
+  ev.forEach(e=>R.feed.push({...e,lap:R.lap}));
+  return ev;
+}
+
+/* ── 결과 확정 + 경제 정산 ── */
+function settleRace(){
+  const R=RACE, st=stratOf(), sp=SPONSORS.find(x=>x.id===S.sponsor);
+  const live=R.cars.filter(c=>!c.out).sort((a,b)=>a.time-b.time);
+  const out =R.cars.filter(c=>c.out).sort((a,b)=>b.dnfLap-a.dnfLap);
+  const order=[...live,...out];
+  order.forEach((c,i)=>{c.pos=i+1;c.pt=c.out?0:(PTS[i]||0);});
+  const flCar=R.cars.find(c=>c.id===R.fastest.id);
+  if(flCar&&!flCar.out&&flCar.pos<=10)flCar.pt+=FL_PT;
+
+  const mine=order.filter(c=>c.me);
+  const fin=mine.filter(c=>!c.out).map(c=>c.pos);
+  const best=fin.length?Math.min(...fin):99;
+
+  const prizeG=mine.reduce((x,c)=>x+(c.out?DNF_PRIZE:(PRIZE[c.pos-1]||0.4)),0);
+  const equityCut=S.equitySold?prizeG*EQ_SHARE:0;
+  const hit=best<=sp.need;
+  const sponsorRev=(sp.base+(hit?sp.bonus:0))*brandMult();
+  const merch=merchRev(best);
+  const ie=Math.max(0,S.cash)*0.006;
+
+  const fixBase=T().baseFixed, fixSal=salaries();
+  const nDnf=mine.filter(c=>c.out).length;
+  const varTyre=st.cost*2, varRepair=nDnf*1.6, varPractice=S.practiceSpend;
+  const interest=S.debt*LOAN_RATE;
+  const dev=S.devRound, mk=S.mkRound;
+
+  const revenue=(prizeG-equityCut)+sponsorRev+merch+ie;
+  const costs=fixBase+fixSal+varTyre+varRepair+varPractice+interest+mk;
+  S.cash+=revenue-costs;
+  S.capUsed+=FIXED_CAP+varTyre+varRepair+varPractice;
+
+  const L=S.ledger;
+  L.prize+=prizeG-equityCut;L.spon+=sponsorRev;L.merch+=merch;L.ie+=ie;
+  L.fixBase+=fixBase;L.fixSal+=fixSal;L.varTyre+=varTyre;L.varRepair+=varRepair;
+  L.varPractice+=varPractice;L.ip+=interest;L.mk+=mk;L.eq+=equityCut;
+
+  mine.forEach(c=>{S.points+=c.pt;S.seats[c.seat].pts+=c.pt;});
+  S.rivals.forEach(r=>{
+    const rc=order.filter(c=>c.team===r.n);
+    r.pts+=rc.reduce((x,c)=>x+c.pt,0);
+    rc.forEach(c=>{const d=r.d.find(d=>d.n===c.name);if(d)d.pts=(d.pts||0)+c.pt;});});
+
+  const bGain=S.mkList.reduce((x,id)=>x+chanGain(id),0);
+  S.mkList.forEach(id=>S.chanUsed[id]++);
+  const posBonus=best===1?2.5:best<=3?1.5:best<=6?0.5:0;
+  S.brand=Math.max(5,Math.min(100,S.brand+bGain+posBonus-0.7));
+
+  const before=S.lastResult?S.lastResult.champPos:null;
+  S.rivals.forEach(r=>r.cp+=rivalGrowth(r.tier)+Math.random()*0.20);
+  S.lastBest=best<99?best:20;
+
+  const res={round:S.round+1,circuit:CIRCUITS[S.round].n,order,mine,best,nDnf,
+    prizeG,equityCut,sponsorRev,merch,ie,fixBase,fixSal,varTyre,varRepair,varPractice,
+    interest,dev,mk,bGain,posBonus,revenue,costs,net:revenue-costs-dev,
+    sponsorId:sp.id,hitBonus:hit,stratId:st.id,gained:mine.reduce((x,c)=>x+c.pt,0),
+    fastest:R.fastest,champPos:0,champPosBefore:before,
+    grid:mine.map(c=>c.grid)};
+
+  S.round++; res.champPos=myPos();
+  S.results.push({r:res.round,best:best<99?best:null,pts:res.gained,dnf:nDnf});
+  S.lastResult=res;
+  S.devRound=0;S.mkRound=0;S.mkList=[];S.practiceSpend=0;S.qMode="bal";S.grid=null;S.practiceDone=false;
+  S.phase="result";
+  if(S.round>=ROUNDS)S.over=true;
+  save();
+  return res;
+}
+</script>
+<script>
+/* ═════════ 팀 선택 화면 ═════════ */
+const bullSVG=`<svg class="bull"><use href="#bull"/></svg>`;
+function paintTeam(t){const r=document.documentElement.style;
+  r.setProperty("--team",t.col);r.setProperty("--team2",t.col2);}
+
+function renderSelect(){
+  $("heroLead").innerHTML=P(
+   "너는 오늘부터 F1 팀의 <b>팀 대표</b>다. 차를 몰지는 않는다. <b>돈을 어디에 쓸지</b> 정한다 — 그게 이 스포츠에서 실제로 순위를 만드는 일이다.",
+   "From today you are the <b>Team Principal</b> of an F1 team. You don't drive. You decide <b>where the money goes</b> - which is what actually creates results in this sport.");
+  $("selLbl").innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <span class="lbl" style="color:var(--ink2);font-size:11px">${Bp("팀 선택","CHOOSE YOUR TEAM")}</span>
+    <span style="flex:1;height:1px;background:var(--line)"></span>
+    <span class="tiny" style="color:var(--dim)">${Bp("출발 조건이 곧 난이도다","Your starting position is the difficulty")}</span></div>`;
+  $("nameHd").innerHTML=B("팀 이름","Team name");
+  $("learnHd").innerHTML=Bp("배우게 될 것","What you'll learn");
+  $("start").innerHTML=B("시즌 시작","Start season");
+  $("selFine").innerHTML=Bp(
+   "10라운드. 매 주말 연습 → 퀄리파잉 → 결승으로 진행한다. 드라이버는 2명, 둘 다 점수를 딴다.",
+   "10 rounds. Each weekend runs Practice → Qualifying → Race. You field two drivers; both score points.");
+  $("learnBody").innerHTML=`<p class="tiny muted" style="margin:0 0 9px">${
+    Object.values(CONCEPTS).map(c=>LANG==="en"?c.k[1]:LANG==="ko"?c.k[0]:c.k[0]).join(" · ")}</p>
+    <p class="fine" style="margin:0">${Bp(
+      "개념은 <b style='color:var(--ink)'>네가 돈을 잃거나 벌었을 때</b> 그 자리에서 설명된다. 설명서에는 전부 미리 적혀 있다.",
+      "Concepts are explained <b style='color:var(--ink)'>the moment they cost or earn you money</b>. All of them are in the manual up front.")}</p>`;
+
+  const diffTxt=d=>d===1?["난이도 하","EASY"]:d===2?["난이도 중","MEDIUM"]:["난이도 상","HARD"];
+  $("teams").innerHTML=Object.values(TEAMS).map(t=>{
+    const dt=diffTxt(t.diff);
+    return `<button class="tc ${picked===t.key?"on":""}" data-team="${t.key}" style="--tcol:${t.col};--tcol2:${t.col2}">
+      <div class="liv"></div>
+      <div class="top"><div class="em">${bullSVG}</div>
+        <div><div class="nm">${t.n}</div><div class="tier">${LANG==="ko"?t.tier[0]:LANG==="en"?t.tier[1]:t.tier[0]+" · "+t.tier[1]}</div></div></div>
+      <div class="bd">
+        <div class="diff"><b style="color:${t.col}">${Bp(dt[0],dt[1])}</b>
+          <span class="bars">${[1,2,3].map(i=>`<i class="${i<=t.diff?"f":""}"></i>`).join("")}</span></div>
+        <dl>
+          <dt>${Bp("목표 순위","Target")}</dt><dd style="color:${t.col}">P${t.target} ${Bp("이내","or better")}</dd>
+          <dt>${Bp("차량 A/P/R","Car A/P/R")}</dt><dd>${t.car.a} / ${t.car.p} / ${t.car.r}</dd>
+          <dt>${Bp("드라이버","Drivers")}</dt><dd>${t.d[0].s} / ${t.d[1].s}</dd>
+          <dt>${Bp("시작 현금","Start cash")}</dt><dd>$${t.cash.toFixed(1)}M</dd>
+          <dt>${Bp("고정비/라운드","Fixed/round")}</dt><dd style="color:${t.baseFixed>10?"var(--red)":t.baseFixed>5?"var(--yellow)":"var(--green)"}">$${(t.baseFixed+t.d[0].sal+t.d[1].sal).toFixed(1)}M</dd>
+        </dl>
+        <p class="note">${LANG==="ko"?t.note[0]:LANG==="en"?t.note[1]:t.note[0]+`<span class="en2">${t.note[1]}</span>`}</p>
+      </div></button>`;}).join("");
+}
+
+/* ═════════ 헤더 · 스탯 ═════════ */
+function renderHeader(){
+  const C=CIRCUITS[Math.min(S.round,ROUNDS-1)];
+  $("teamName").textContent=S.name;
+  $("teamGoal").innerHTML=`${Bp("목표","TARGET")} P${T().target} · ${Bp("고정비","FIXED")} ${M(fixedCost())}/R · ${C.laps} ${Bp("랩","LAPS")}`;
+  $("roundlbl").textContent=`ROUND ${Math.min(S.round+1,ROUNDS)} / ${ROUNDS}`;
+  $("circuitName").textContent=C.n;
+  $("trackmap").innerHTML=`<path class="ghost" d="${C.t}"/><path d="${C.t}"/><path class="sf" d="M24 51 L24 59"/>`;
+  $("cal").innerHTML=CIRCUITS.map((c,i)=>{
+    const r=S.results[i];
+    const txt=!r?"·":r.best?("P"+r.best):"DNF";
+    const col=!r?"transparent":!r.best?"var(--red)":r.best<=3?"var(--green)":"var(--ink2)";
+    return `<div class="r ${i<S.round?"done":""} ${i===S.round?"now":""}">
+      <div class="n">R${i+1}</div><div class="c">${c.n}</div>
+      <div class="fin" style="color:${col}">${txt}</div></div>`;}).join("");
+}
+function renderStats(){
+  const cp=myPos(),tgt=T().target,av=capAvail();
+  $("stats").innerHTML=`
+   <div class="stat"><div class="lbl">${Bp("현금","CASH")}</div>
+     <div class="v ${S.cash<8?"neg":""}">${M(S.cash)}</div>
+     <div class="sub">${Bp("부채","DEBT")} ${M(S.debt)}</div></div>
+   <div class="stat"><div class="lbl">${Bp("순자산","NET WORTH")}</div>
+     <div class="v ${netWorth()<0?"neg":"pos"}">${M(netWorth())}</div>
+     <div class="sub">${Bp("현금 − 부채","cash − debt")}</div></div>
+   <div class="stat"><div class="lbl">${Bp("컨스트럭터","CONSTRUCTORS")}</div>
+     <div class="v ${S.round===0?"":(cp<=tgt?"pos":"warn")}">${S.round===0?"—":"P"+cp}</div>
+     <div class="sub">${S.points} PTS · ${Bp("목표","tgt")} P${tgt}</div></div>
+   <div class="stat"><div class="lbl">${Bp("브랜드 지수","BRAND INDEX")}</div>
+     <div class="v acc">${S.brand.toFixed(0)}</div>
+     <div class="sub">${Bp("스폰서","sponsor")} ×${brandMult().toFixed(2)}</div></div>
+   <div class="stat"><div class="lbl">${Bp("개발 가능액","R&D AVAILABLE")}</div>
+     <div class="v ${av<10?"neg":av<25?"warn":""}">${M(Math.max(0,av))}</div>
+     <div class="sub">${Bp("상한잔여","cap left")} ${M(capLeft())}</div></div>`;
+}
+function renderPhases(){
+  const ph=[["paddock","팀 운영","PADDOCK"],["practice","연습","PRACTICE"],
+            ["quali","퀄리파잉","QUALIFYING"],["race","결승","RACE"]];
+  const idx=p=>["paddock","practice","quali","race","result"].indexOf(p);
+  const cur=idx(S.phase);
+  $("phases").innerHTML=ph.map((x,i)=>
+    `<button class="ph ${S.phase===x[0]?"on":""} ${i<cur?"done":""}" disabled>
+      ${LANG==="en"?x[2]:x[1]}<span class="s">${LANG==="ko"?"":x[2]}</span></button>`).join("");
+}
+
+/* ═════════ 패독 ═════════ */
+function devRow(key,koL,enL,val,cost,cls,mark){
+  const ok=S.cash>=cost&&capAvail()>=cost&&val<100;
+  return `<div class="devrow">
+    <div class="nm">${LANG==="en"?enL:koL}<em>${enL}</em></div>
+    <div><div class="mrow"><span class="val">${val}</span>
+      <span class="mc">${Bp("다음 +1","next +1")} = ${M(cost)}</span></div>
+      <div class="meter ${cls}"><span style="width:${val}%"></span>${mark!=null?`<i style="left:${mark}%"></i>`:""}</div></div>
+    <div class="buys">
+      <button class="b" data-buy="${key}" data-n="1" ${ok?"":"disabled"}>+1</button>
+      <button class="b" data-buy="${key}" data-n="5" ${ok?"":"disabled"}>+5</button></div></div>`;
+}
+function renderPaddock(){
+  const ra=S.rivals.reduce((x,r)=>x+r.cp,0)/S.rivals.length;
+  const mark=Math.max(0,Math.min(100,ra/0.80));
+  const st=stratOf();
+  const mkCost=mkPlanned();
+
+  const dev=`<div class="card"><div class="hd"><h2>${B("개발","R&D")}</h2>
+    <span class="tag">${Bp("이번 라운드","this round")} ${M(S.devRound)}</span></div><div class="bd">
+    ${devRow("a","에어로","AERO",S.a,mcA(S.a),"",mark)}
+    ${devRow("p","파워","POWER UNIT",S.p,mcP(S.p),"",mark)}
+    ${devRow("r","신뢰성","RELIABILITY",S.rel,mcR(S.rel),"rel",null)}
+    <p class="fine" style="margin:12px 0 0">${Bp(
+      "포인트를 올릴수록 <b style='color:var(--yellow)'>다음 1포인트 값</b>이 비싸진다. 흰 눈금은 <b>라이벌 평균</b>.",
+      "Each point raises the <b style='color:var(--yellow)'>price of the next one</b>. The white tick is the <b>rival average</b>.")}</p></div></div>`;
+
+  const chans=`<div class="card"><div class="hd"><h2>${B("마케팅","MARKETING")}</h2>
+    <span class="tag">${Bp("비용 상한 제외","cap-exempt")} · ${M(mkCost)}</span></div><div class="bd">
+    <div class="opts">${CHANNELS.map(c=>{
+      const on=S.mkList.includes(c.id);
+      const locked=(c.need&&S.brand<c.need)||(c.id==="docu"&&S.chanUsed.docu>0);
+      const g=chanGain(c.id);
+      const eff=g>0?(c.cost/g):0;
+      return `<button class="opt ${on?"sel":""}" data-chan="${c.id}" ${locked?"disabled":""}>
+        <div class="t">${LANG==="en"?c.t[1]:c.t[0]}
+          <span class="pay">${locked?(c.id==="docu"&&S.chanUsed.docu>0?Bp("올해 완료","done"):Bp("브랜드 "+c.need+" 필요","needs brand "+c.need))
+            :`$${c.cost}M → +${g.toFixed(1)} · $${eff.toFixed(2)}M/${Bp("점","pt")}`}</span></div>
+        <div class="d">${LANG==="ko"?c.d[0]:LANG==="en"?c.d[1]:c.d[0]+`<span class="en2">${c.d[1]}</span>`}</div></button>`;}).join("")}</div>
+    <div class="pl" style="margin-top:10px">
+      <div class="l"><span class="k">${Bi("브랜드 1점의 라운드 수익","Revenue per brand point / round")}</span><span>${M(brandPerRound())}</span></div>
+      <div class="l"><span class="k">${Bi("남은 라운드 회수 예상","Payback over remaining rounds")}</span>
+        <span class="${estPayback()>=mkCost?"pos":"neg"}">${M(estPayback())}</span></div></div></div></div>`;
+
+  const spon=`<div class="card"><div class="hd"><h2>${B("스폰서 계약","SPONSOR DEAL")}</h2>
+    <span class="tag">${Bp("라운드마다 재선택","re-pick each round")}</span></div><div class="bd"><div class="opts">
+    ${SPONSORS.map(s=>{
+      const locked=s.brandNeed&&S.brand<s.brandNeed;
+      const pay=s.bonus?`${M(s.base*brandMult())} + ${M(s.bonus*brandMult())}`:`${M(s.base*brandMult())}`;
+      return `<button class="opt ${S.sponsor===s.id?"sel":""}" data-sp="${s.id}" ${locked?"disabled":""}>
+        <div class="t">${LANG==="en"?s.t[1]:s.t[0]}<span class="pay">${locked?Bp("브랜드 60 필요","needs brand 60"):pay}</span></div>
+        <div class="d">${LANG==="ko"?s.d[0]:LANG==="en"?s.d[1]:s.d[0]+`<span class="en2">${s.d[1]}</span>`}</div></button>`;}).join("")}
+    </div></div></div>`;
+
+  const strat=`<div class="card"><div class="hd"><h2>${B("레이스 전략","RACE STRATEGY")}</h2>
+    <span class="tag">Sunday</span></div><div class="bd"><div class="opts">
+    ${STRATS.map(s=>{const pr=dnfProb(s)*100;
+      return `<button class="opt ${S.strat===s.id?"sel":""}" data-st="${s.id}">
+        <div class="t">${LANG==="en"?s.t[1]:s.t[0]}<span class="pay" style="color:${pr>13?"var(--red)":pr>7?"var(--yellow)":"var(--green)"}">${Bp("리타이어","DNF")} ${pr.toFixed(0)}%</span></div>
+        <div class="d">${LANG==="ko"?s.d[0]:LANG==="en"?s.d[1]:s.d[0]+" · "+s.d[1]} · ${Bp("변동비","variable")} ${M(s.cost*2)}</div></button>`;}).join("")}
+    </div></div></div>`;
+
+  const fin=`<div class="card"><div class="hd"><h2>${B("자금 조달","FINANCING")}</h2>
+    <span class="tag">${S.equitySold?Bp("지분 25% 매각됨","25% equity sold"):"Financing"}</span></div><div class="bd"><div class="opts">
+    <button class="opt" data-fin="loan" ${S.debt+10>LOAN_MAX?"disabled":""}>
+      <div class="t">${Bp("대출 받기","Take a loan")}<span class="pay" style="color:var(--blue)">+$10.0M</span></div>
+      <div class="d">${Bp(`즉시 현금 $10.0M. 라운드당 이자 <b>4%</b> (현재 ${M(S.debt*LOAN_RATE)}/R). 시즌 말 원금 상환. 한도 ${M(LOAN_MAX)}.`,
+        `$10.0M now. <b>4%</b> interest per round (currently ${M(S.debt*LOAN_RATE)}/R). Principal due at season end. Limit ${M(LOAN_MAX)}.`)}</div></button>
+    <button class="opt" data-fin="repay" ${S.debt<=0||S.cash<Math.min(10,S.debt)?"disabled":""}>
+      <div class="t">${Bp("대출 상환","Repay loan")}<span class="pay" style="color:var(--yellow)">−${M(Math.min(10,S.debt))}</span></div>
+      <div class="d">${Bp(`원금을 갚아 이자 부담을 줄인다. 현재 부채 ${M(S.debt)}.`,`Cut the interest burden. Current debt ${M(S.debt)}.`)}</div></button>
+    <button class="opt" data-fin="equity" ${S.equitySold?"disabled":""}>
+      <div class="t">${Bp("지분 투자 유치","Sell equity")}<span class="pay">${S.equitySold?Bp("매각 완료","sold"):"+"+M(EQ_CASH)}</span></div>
+      <div class="d">${S.equitySold?Bp("투자자가 이후 모든 상금의 25%를 가져간다. 되돌릴 수 없다.","The investor takes 25% of all future prize money. Irreversible.")
+        :Bp("현금 $25.0M. 갚을 의무는 없지만 <b>이후 모든 상금의 25%</b>를 영구히 넘긴다.","$25.0M now. Never repaid - but you hand over <b>25% of all future prize money</b>, permanently.")}</div></button>
+    </div></div></div>`;
+
+  const committed=fixedCost()+st.cost*2+S.debt*LOAN_RATE+mkCost+S.devRound;
+  const prev=`<div class="card"><div class="hd"><h3>${B("레이스 전 확정 지출","COMMITTED BEFORE THE RACE")}</h3>
+    <span class="tag">Committed</span></div><div class="bd pl">
+    <div class="l"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span class="neg">−${M(T().baseFixed)}</span></div>
+    <div class="l"><span class="k">${Bi("고정비 — 드라이버 연봉","Fixed - driver salaries")}</span><span class="neg">−${M(salaries())}</span></div>
+    <div class="l"><span class="k">${Bi("변동비 — 타이어·부품 (2대)","Variable - tyres & parts (2 cars)")}</span><span class="neg">−${M(st.cost*2)}</span></div>
+    ${S.debt>0?`<div class="l"><span class="k">${Bi("이자비용","Interest")}</span><span class="neg">−${M(S.debt*LOAN_RATE)}</span></div>`:""}
+    ${mkCost>0?`<div class="l"><span class="k">${Bi("마케팅비","Marketing")}</span><span class="neg">−${M(mkCost)}</span></div>`:""}
+    ${S.devRound>0?`<div class="l"><span class="k">${Bi("개발비 (집행 완료)","R&D (already spent)")}</span><span class="neg">−${M(S.devRound)}</span></div>`:""}
+    <div class="l sum"><span class="k">${Bi("이만큼은 벌어야 본전","You must earn this just to break even")}</span><span class="warn">${M(committed)}</span></div></div></div>`;
+
+  $("pPaddock").innerHTML=dev+renderDrivers()+chans+spon+strat+fin+prev+
+    `<button class="go" id="toPractice">${B("주말 시작 — 연습 주행","Start weekend - Practice")}</button>`;
+}
+function estPayback(){
+  const g=S.mkList.reduce((x,id)=>x+chanGain(id),0);
+  return g*brandPerRound()*Math.max(0,ROUNDS-S.round-1);
+}
+</script>
+<script>
+/* ═════════ 드라이버 ═════════ */
+function dCard(d,kind,i){
+  const cond=d.cond||1;
+  const condTxt=cond>=1.08?["최상","Peak"]:cond>=1.02?["좋음","Good"]:cond>=0.96?["보통","Normal"]:["나쁨","Poor"];
+  const condCol=cond>=1.08?"var(--green)":cond>=1.02?"var(--ink)":cond>=0.96?"var(--ink2)":"var(--red)";
+  const acts=kind==="seat"
+    ? `<button class="b" data-drv="demote" data-i="${i}" ${S.academy.length>=3?"disabled":""}>${Bp("2군 강등","To academy")}</button>`
+    : kind==="academy"
+    ? `<button class="b" data-drv="promote" data-i="${i}">${Bp("1군 승격","Promote")}</button>`
+    : `<button class="b" data-drv="sign" data-i="${i}" ${S.cash<d.sal*2?"disabled":""}>${Bp("영입","Sign")} (${M(d.sal*2)})</button>`;
+  return `<div class="dcard ${kind==="seat"?"seat":""}">
+    <div class="dh"><div class="dn">${d.n}</div>
+      <div class="dno">${kind==="seat"?"CAR "+d.no:kind==="academy"?Bp("2군","ACADEMY"):Bp("영입 가능","FREE AGENT")}</div></div>
+    <dl>
+      <dt>${Bp("실력","Skill")}</dt><dd>${d.s.toFixed(0)}</dd>
+      <dt>${Bp("안정성","Consistency")}</dt><dd>${(d.c*100).toFixed(0)}</dd>
+      <dt>${Bp("나이","Age")}</dt><dd>${d.age}</dd>
+      <dt>${Bp("연봉/라운드","Salary/round")}</dt><dd class="warn">${M(d.sal)}</dd>
+      ${kind==="seat"?`<dt>${Bp("시즌 포인트","Season pts")}</dt><dd>${d.pts}</dd>`:""}
+      ${kind==="seat"&&S.phase!=="paddock"?`<dt>${Bp("이번 주 컨디션","Condition")}</dt><dd class="cond" style="color:${condCol}">${Bp(condTxt[0],condTxt[1])} ${(cond*100).toFixed(0)}%</dd>`:""}
+    </dl>
+    <div class="sk"><span style="width:${d.s}%"></span></div>
+    ${S.phase==="paddock"?`<div class="dacts">${acts}</div>`:""}</div>`;
+}
+function renderDrivers(){
+  return `<div class="card"><div class="hd"><h2>${B("드라이버","DRIVERS")}</h2>
+    <span class="tag">${Bp("연봉 합계","total salary")} ${M(salaries())}/R</span></div><div class="bd">
+    <div class="drv">${S.seats.map((d,i)=>dCard(d,"seat",i)).join("")}</div>
+    <hr class="sep">
+    <h3 style="margin-bottom:8px">${Bi("2군 아카데미","Academy")}</h3>
+    <div class="drv">${S.academy.length?S.academy.map((d,i)=>dCard(d,"academy",i)).join("")
+      :`<p class="fine" style="margin:0">${Bp("아카데미가 비었다.","Academy is empty.")}</p>`}</div>
+    <p class="fine" style="margin:9px 0 0">${Bp(
+      "아카데미 드라이버는 매 라운드 실력이 오른다(연습 주행에 투자하면 더 빨리). 연봉은 싸다.",
+      "Academy drivers gain skill every round (faster if you fund practice running). Their salaries are cheap.")}</p>
+    <hr class="sep">
+    <h3 style="margin-bottom:8px">${Bi("영입 시장","Driver market")}</h3>
+    <div class="drv">${S.market.map((d,i)=>dCard(d,"market",i)).join("")}</div>
+    <p class="fine" style="margin:9px 0 0">${Bp(
+      "영입하면 <b>계약금(연봉 2배)</b>을 즉시 내고, 밀려난 드라이버는 아카데미로 간다. 연봉은 성적과 무관하게 나가는 <b>고정비</b>다.",
+      "Signing costs an upfront <b>fee of 2x salary</b>; the displaced driver moves to the academy. Salaries are a <b>fixed cost</b> - paid whether you win or lose.")}</p>
+    </div></div>`;
+}
+
+/* ═════════ 연습 · 퀄리파잉 ═════════ */
+function renderPractice(){
+  const done=!!S.practiceDone;
+  $("pPractice").innerHTML=`
+   <div class="card"><div class="hd"><h2>${B("금요일 — 연습 주행","FRIDAY - PRACTICE")}</h2>
+     <span class="tag">${CIRCUITS[S.round].n}</span></div><div class="bd">
+     <p class="tiny muted" style="margin:0 0 12px">${Bp(
+       "연습에서 드라이버 <b>컨디션</b>이 드러난다. 컨디션은 매주 달라지고 페이스에 직접 영향을 준다. 셋업 프로그램에 돈을 쓰면 컨디션이 조금 오르고 아카데미 드라이버 실력도 더 빨리 는다.",
+       "Practice reveals each driver's <b>condition</b> for the weekend. It changes weekly and feeds straight into pace. Funding a setup programme nudges condition up and develops your academy driver faster.")}</p>
+     <div class="opts">
+       <button class="opt ${S.practiceSpend===0?"sel":""}" data-prac="0">
+         <div class="t">${Bp("기본 주행","Standard running")}<span class="pay">$0.0M</span></div>
+         <div class="d">${Bp("추가 비용 없음.","No extra cost.")}</div></button>
+       <button class="opt ${S.practiceSpend>0?"sel":""}" data-prac="1" ${S.cash<1.2?"disabled":""}>
+         <div class="t">${Bp("셋업 프로그램","Setup programme")}<span class="pay">$1.2M</span></div>
+         <div class="d">${Bp("컨디션 +3.5%p, 아카데미 드라이버 실력 +1.2 추가. <b>변동비</b>로 잡힌다.","Condition +3.5pp, academy driver +1.2 skill. Booked as a <b>variable cost</b>.")}</div></button>
+     </div>
+     ${done?`<div class="drv" style="margin-top:14px">${S.seats.map((d,i)=>dCard(d,"seat",i)).join("")}</div>`:""}
+     <div style="margin-top:14px">${done
+       ? `<button class="go" id="toQuali">${B("퀄리파잉으로","To qualifying")}</button>`
+       : `<button class="go" id="runPractice">${B("연습 주행 시작","Run practice")}</button>`}</div>
+   </div></div>`;
+}
+function renderQuali(){
+  const done=!!S.grid;
+  let gridHtml="";
+  if(done){
+    const rows=S.grid.slice(0,20).map(g=>`<tr class="${g.me?"me":""}">
+      <td class="p">${g.grid}</td>
+      <td class="tm"><span class="lv" style="background:${g.col}"></span>${g.name}</td>
+      <td class="gap">${g.team}</td></tr>`).join("");
+    gridHtml=`<div class="scroll" style="margin-top:13px"><table class="tt">
+      <tr><th>${Bp("그리드","GRID")}</th><th>${Bp("드라이버","DRIVER")}</th><th class="gap">${Bp("팀","TEAM")}</th></tr>
+      ${rows}</table></div>`;
+  }
+  $("pQuali").innerHTML=`
+   <div class="card"><div class="hd"><h2>${B("토요일 — 퀄리파잉","SATURDAY - QUALIFYING")}</h2>
+     <span class="tag">${Bp("그리드 결정","sets the grid")}</span></div><div class="bd">
+     <p class="tiny muted" style="margin:0 0 12px">${Bp(
+       "퀄리파잉 결과가 결승 <b>출발 순서</b>다. 앞에서 출발할수록 유리하지만, 무리하게 밀어붙이면 <b>10% 확률로 랩을 망친다.</b>",
+       "Qualifying sets the <b>starting order</b>. Starting further forward helps - but pushing too hard <b>ruins the lap 10% of the time</b>.")}</p>
+     <div class="opts">
+       ${[["save","안전하게","Bank a lap","−1.2","","타이어를 아끼고 확실한 랩을 남긴다. 리스크 없음.","Save tyres, bank a safe lap. No risk."],
+          ["bal","표준","Standard","0","","보통 수준으로 밀어붙인다.","A normal push."],
+          ["push","한계까지","Maximum attack","+1.8","10%","페이스 +1.8. 대신 <b>10% 확률로 랩을 망쳐</b> 뒤에서 출발한다.","Pace +1.8, but a <b>10% chance of wrecking the lap</b> and starting at the back."]]
+        .map(o=>`<button class="opt ${S.qMode===o[0]?"sel":""}" data-q="${o[0]}" ${done?"disabled":""}>
+          <div class="t">${LANG==="en"?o[2]:o[1]}<span class="pay" style="color:${o[4]?"var(--red)":"var(--green)"}">${Bp("페이스","pace")} ${o[3]}${o[4]?" · "+Bp("실패","fail")+" "+o[4]:""}</span></div>
+          <div class="d">${LANG==="ko"?o[5]:LANG==="en"?o[6]:o[5]+`<span class="en2">${o[6]}</span>`}</div></button>`).join("")}
+     </div>
+     ${gridHtml}
+     <div style="margin-top:14px">${done
+       ? `<button class="go" id="toRace">${B("결승 시작","Go racing")}</button>`
+       : `<button class="go" id="runQuali">${B("퀄리파잉 시작","Run qualifying")}</button>`}</div>
+   </div></div>`;
+}
+
+/* ═════════ 중계 ═════════ */
+let raceTimer=null, raceSpeed=400;
+function renderRaceShell(){
+  $("pRace").innerHTML=`
+   <div class="lapbar">
+     <div class="lc" id="lapCount">0<small>/${RACE.laps}</small></div>
+     <div class="lapprog"><span id="lapProg" style="width:0%"></span></div>
+     <span class="flag green" id="flagState">GREEN</span>
+     <div class="spd" id="spdSeg">
+       <button data-spd="1000">${Bp("실황","LIVE")}</button>
+       <button data-spd="400" class="on">${Bp("빠르게","FAST")}</button>
+       <button data-spd="120">${Bp("매우 빠르게","TURBO")}</button>
+       <button data-spd="0">${Bp("건너뛰기","SKIP")}</button>
+     </div>
+   </div>
+   <div class="bcast">
+     <div class="card" style="margin:0"><div class="hd"><h2>${B("타이밍 타워","TIMING TOWER")}</h2>
+       <span class="tag">${CIRCUITS[S.round].n}</span></div>
+       <div class="bd" style="padding:8px"><div class="tower" id="tower" style="height:${20*23+10}px"></div></div></div>
+     <div class="card" style="margin:0"><div class="hd"><h3>${B("중계","COMMENTARY")}</h3></div>
+       <div class="bd" style="padding:8px"><div class="feed" id="feed"></div></div></div>
+   </div>
+   <button class="go" id="toResult" style="margin-top:14px" disabled>${B("결과 확인","See the result")}</button>`;
+  drawTower(); drawFeed();
+}
+function drawTower(){
+  const R=RACE;
+  const rows=R.cars.slice().sort((a,b)=>a.pos-b.pos);
+  $("tower").innerHTML=rows.map(c=>{
+    const lead=R.cars.find(x=>x.pos===1);
+    const gap=c.out?Bp("리타이어","RETIRED")
+      :c.pos===1?"LEADER":"+"+((c.time-lead.time)).toFixed(1)+"s";
+    const mv=c.pos<c.prev?"up":c.pos>c.prev?"down":"";
+    const isFL=R.fastest.id===c.id;
+    return `<div class="trow ${c.me?"mine":""} ${c.out?"out":""} ${mv} ${c.inPit?"pit":""}"
+       style="transform:translateY(${(c.pos-1)*23}px)">
+      <div class="tp">${c.out?"—":c.pos}</div>
+      <div class="tn"><span class="lv" style="background:${c.col}"></span>${c.name}</div>
+      <div class="tg">${c.inPit?Bp("피트","PIT"):gap}</div>
+      <div class="tx" style="color:${isFL?"#C77DFF":"var(--dim)"}">${isFL?"FL":""}</div></div>`;}).join("");
+}
+function drawFeed(){
+  const items=RACE.feed.slice(-70).reverse();
+  $("feed").innerHTML=items.map(e=>{
+    const txt=LANG==="en"?e.en:e.ko;
+    return `<div class="fitem ${e.k} ${e.me?"mine":""}"><span class="lp">L${e.lap}</span>${txt}</div>`;}).join("");
+}
+function startRace(){
+  if(!RACE)initRace();
+  renderRaceShell();
+  tickRace();
+}
+function tickRace(){
+  if(raceTimer){clearTimeout(raceTimer);raceTimer=null;}
+  if(raceSpeed===0){
+    while(!RACE.done)stepLap();
+    afterLap(); return;
+  }
+  const loop=()=>{
+    stepLap(); afterLap();
+    if(!RACE.done)raceTimer=setTimeout(loop,raceSpeed);
+  };
+  loop();
+}
+function afterLap(){
+  const R=RACE;
+  $("lapCount").innerHTML=`${R.lap}<small>/${R.laps}</small>`;
+  $("lapProg").style.width=(R.lap/R.laps*100)+"%";
+  const f=$("flagState");
+  if(R.done){f.className="flag chk";f.textContent="CHEQUERED";}
+  else if(R.sc>0){f.className="flag sc";f.textContent="SAFETY CAR";}
+  else{f.className="flag green";f.textContent="GREEN";}
+  drawTower(); drawFeed();
+  if(R.done)$("toResult").disabled=false;
+}
+</script>
+<script>
+/* ═════════ 브리핑 ═════════ */
+const unlock=k=>{if(!S.concepts[k]){S.concepts[k]=true;return true;}return false;};
+function briefFor(r){
+  const sp=SPONSORS.find(x=>x.id===r.sponsorId);
+  const safeNow=4.5*brandMult();
+  const be=((4.5-1.0)/8.5*100).toFixed(0);
+
+  if(r.nDnf===2)return{c:"risk",
+   ko:`두 대가 모두 리타이어했다. 신뢰성 <b>${S.rel}</b>에서 한 대당 리타이어 확률은 약 <b>${(dnfProb(STRATS.find(x=>x.id===r.stratId))*100).toFixed(0)}%</b>다. 이번 라운드 상금은 ${M(r.prizeG)}뿐인데 고정비 <b>${M(r.fixBase+r.fixSal)}</b>는 그대로 나갔다. 신뢰성은 순위를 올려주지 않아 투자하기 아까워 보이지만, <b>완주하지 못하면 아무것도 벌 수 없다.</b>`,
+   en:`Both cars retired. At reliability <b>${S.rel}</b> each car has roughly a <b>${(dnfProb(STRATS.find(x=>x.id===r.stratId))*100).toFixed(0)}%</b> chance of stopping. Prize money was just ${M(r.prizeG)} while fixed costs of <b>${M(r.fixBase+r.fixSal)}</b> went out anyway. Reliability never shows up on the timing screen - but <b>you can't earn anything if you don't finish.</b>`};
+
+  if(r.nDnf===1&&r.stratId==="aggr")return{c:"risk",
+   ko:`공격 전략은 페이스를 +4.5 올려주는 대신 리타이어 확률을 <b>약 2배</b>로 키운다. 이번엔 그 확률이 터졌다 — 수리비 <b>${M(r.varRepair)}</b>가 추가로 나갔다. 공격이 <b>틀린 선택이었다는 뜻은 아니다.</b> 기대값이 높아도 결과는 흔들린다. 중요한 건 그 흔들림을 <b>버틸 현금이 있느냐</b>다.`,
+   en:`Aggressive strategy adds +4.5 pace but roughly <b>doubles</b> retirement risk. This time it bit - <b>${M(r.varRepair)}</b> in repairs on top. That doesn't make it <b>the wrong call.</b> High expected value still comes with swings. What matters is whether you have <b>the cash to survive them.</b>`};
+
+  if(r.sponsorId==="perf"&&r.hitBonus)return{c:"ev",
+   ko:`포디움 <b>P${r.best}</b> — 성과형 보너스가 터졌다. 브랜드 배수 <b>×${brandMult().toFixed(2)}</b>가 곱해져 실수령 <b>${M(r.sponsorRev)}</b>, 안정형이었다면 ${M(safeNow)}였다. 기대값은 확률 × 보상이다. 포디움이 확실해질수록 성과형이 유리하다.`,
+   en:`Podium <b>P${r.best}</b> - the performance bonus paid. With the brand multiplier <b>×${brandMult().toFixed(2)}</b> you banked <b>${M(r.sponsorRev)}</b>; the guaranteed deal would have paid ${M(safeNow)}. Expected value is probability × payoff. The surer the podium, the better the performance deal.`};
+
+  if(r.sponsorId==="perf"&&!r.hitBonus)return{c:"ev",
+   ko:`포디움을 놓쳐 보너스는 없다. 성과형은 <b>${M(r.sponsorRev)}</b>만 들어왔고 안정형이었다면 <b>${M(safeNow)}</b>였다. 차액 ${M(safeNow-r.sponsorRev)}가 이번 판돈이었다. 계약 전에 곱셈을 해보자 — 포디움 확률이 <b>${be}%</b>를 넘을 것 같으면 성과형, 아니면 안정형. 이게 <b>손익분기 확률</b>이다.`,
+   en:`No podium, no bonus. The performance deal paid <b>${M(r.sponsorRev)}</b> where the guaranteed one would have paid <b>${M(safeNow)}</b> - a ${M(safeNow-r.sponsorRev)} bet. Do the multiplication first: if your podium chance is above <b>${be}%</b>, take the performance deal; below it, take the guarantee. That's the <b>break-even probability</b>.`};
+
+  if(r.sponsorId==="title")return{c:"ev",
+   ko:r.hitBonus?`우승 — 타이틀 보너스 전액 지급, 스폰서 수익 <b>${M(r.sponsorRev)}</b>. 최고의 위험은 <b>이길 수 있을 때</b> 거는 위험이다.`
+     :`P${r.best<99?r.best:"—"}. 타이틀 스폰서는 우승 아니면 <b>0원</b>이다. 이번 스폰서 수익 ${M(r.sponsorRev)}. 전부 아니면 전무인 계약은 우승 확률이 <b>${(4.5/22*100).toFixed(0)}%</b>를 넘을 때만 안정형보다 낫다.`,
+   en:r.hitBonus?`Win - the title bonus paid in full, <b>${M(r.sponsorRev)}</b> in sponsorship. The best risks are the ones you take <b>when you can actually win</b>.`
+     :`P${r.best<99?r.best:"-"}. The title deal pays <b>nothing</b> without a win. Sponsorship this round: ${M(r.sponsorRev)}. All-or-nothing only beats the guarantee when your win probability is above <b>${(4.5/22*100).toFixed(0)}%</b>.`};
+
+  if(r.dev>0&&(mcA(S.a)>3.5||mcP(S.p)>3.5))return{c:"dim",
+   ko:`이번 라운드 개발비 <b>${M(r.dev)}</b>. 지금 에어로 1포인트는 <b>${M(mcA(S.a))}</b>, 파워는 <b>${M(mcP(S.p))}</b>다. 시즌 초에는 $1M 안팎이었다. 이게 한계수확체감이다 — 같은 곳에 계속 부으면 추가 1단위 값이 계속 오른다. 지금은 <b>덜 개발된 쪽</b>이 같은 돈으로 더 많은 성능을 준다.`,
+   en:`R&D this round: <b>${M(r.dev)}</b>. One aero point now costs <b>${M(mcA(S.a))}</b> and one power point <b>${M(mcP(S.p))}</b> - both were around $1M at the start of the season. That's diminishing returns: keep pouring into the same area and each extra unit costs more. Right now the <b>less developed</b> area buys more performance per dollar.`};
+
+  if(r.dev>0&&r.champPosBefore&&r.champPos>r.champPosBefore)return{c:"comp",
+   ko:`개발비 <b>${M(r.dev)}</b>를 썼는데도 챔피언십 순위가 <b>P${r.champPosBefore} → P${r.champPos}</b>로 떨어졌다. 차는 분명히 좋아졌다. 문제는 라이벌도 같이 좋아졌다는 것이다 — 그것도 <b>상위 팀일수록 더 빨리</b>. 투자했는데 순위가 떨어지는 건 실패가 아니라 <b>남들만큼 투자하지 못했다</b>는 뜻이다.`,
+   en:`You spent <b>${M(r.dev)}</b> on R&D and still slipped from <b>P${r.champPosBefore} to P${r.champPos}</b>. The car did improve. So did everyone else's - and <b>the stronger the team, the faster they develop</b>. Falling while investing doesn't mean the investment failed; it means <b>you didn't invest as much as they did.</b>`};
+
+  if(r.mk>3&&r.round>=8)return{c:"brand",
+   ko:`마케팅 <b>${M(r.mk)}</b>로 브랜드가 <b>+${r.bGain.toFixed(1)}</b> 올랐다. 브랜드 1점은 라운드당 약 <b>${M(brandPerRound())}</b>을 벌어온다. 남은 라운드는 <b>${ROUNDS-r.round}</b>번뿐이라 회수 예상액은 ${M(r.bGain*brandPerRound()*(ROUNDS-r.round))} — 쓴 돈보다 적다. 투자에는 <b>회수할 시간</b>이 필요하다.`,
+   en:`<b>${M(r.mk)}</b> of marketing lifted your brand by <b>+${r.bGain.toFixed(1)}</b>. Each brand point earns about <b>${M(brandPerRound())}</b> per round. With only <b>${ROUNDS-r.round}</b> rounds left, that recovers about ${M(r.bGain*brandPerRound()*(ROUNDS-r.round))} - less than you spent. Investment needs <b>time to pay back</b>.`};
+
+  if(salaries()>fixedCost()*0.45)return{c:"human",
+   ko:`드라이버 연봉이 <b>${M(salaries())}</b>로 전체 고정비 ${M(r.fixBase+r.fixSal)}의 <b>${(salaries()/(r.fixBase+r.fixSal)*100).toFixed(0)}%</b>를 차지한다. 이 돈은 우승해도 꼴찌해도 똑같이 나간다. 스타 드라이버는 즉시 빨라지지만, 그 연봉으로 <b>차를 개발할 수도 있었다.</b> 사람에 대한 투자도 다른 투자와 똑같은 계산이다.`,
+   en:`Driver salaries are <b>${M(salaries())}</b> - <b>${(salaries()/(r.fixBase+r.fixSal)*100).toFixed(0)}%</b> of your ${M(r.fixBase+r.fixSal)} fixed cost. That money goes out whether you win or finish last. A star driver makes you fast now, but the same salary <b>could have developed the car.</b> Investing in people follows the same maths as anything else.`};
+
+  if(capAvail()<12)return{c:"scarcity",
+   ko:`개발 가능액이 <b>${M(Math.max(0,capAvail()))}</b>까지 줄었다. 비용 상한 잔여는 ${M(capLeft())}지만, 남은 ${ROUNDS-r.round}라운드의 운영비 <b>${M((ROUNDS-r.round)*(FIXED_CAP+VAR_EST))}</b>는 이미 임자가 있다. 현금이 남아 있어도 <b>쓸 수 없다.</b> 가진 돈과 쓸 수 있는 돈은 다르다.`,
+   en:`R&D headroom has fallen to <b>${M(Math.max(0,capAvail()))}</b>. There's ${M(capLeft())} of cost cap left, but <b>${M((ROUNDS-r.round)*(FIXED_CAP+VAR_EST))}</b> of it is already committed to running the next ${ROUNDS-r.round} rounds. You can have cash and still <b>not be allowed to spend it.</b>`};
+
+  if(S.debt>0&&r.interest>0.6)return{c:"fund",
+   ko:`부채 <b>${M(S.debt)}</b>에 대한 이자 <b>${M(r.interest)}</b>가 이번 라운드 비용에 들어갔다. 순위와 무관하게 나가는 돈이다. 대출은 성적이 좋으면 싼 자금, 나쁘면 목을 조르는 자금이다. 지분 투자는 반대 — 갚을 의무는 없지만 <b>성공할수록 비싸진다.</b>`,
+   en:`Interest of <b>${M(r.interest)}</b> on <b>${M(S.debt)}</b> of debt hit this round's costs - money that leaves regardless of where you finish. A loan is cheap money when results are good and a noose when they aren't. Equity is the mirror image: never repaid, but <b>more expensive the better you do.</b>`};
+
+  if(r.equityCut>1.0)return{c:"fund",
+   ko:`상금 ${M(r.prizeG)} 중 <b>${M(r.equityCut)}</b>가 투자자 몫으로 빠졌다. 성적이 좋아질수록 이 금액은 커진다. 지분 조달의 값은 계약할 때가 아니라 <b>성공한 뒤에</b> 청구된다.`,
+   en:`<b>${M(r.equityCut)}</b> of your ${M(r.prizeG)} prize money went to the investor. The better you do, the bigger that slice gets. Equity charges you <b>after you succeed</b>, not when you sign.`};
+
+  if(r.dev>6&&r.best<=5)return{c:"roi",
+   ko:`개발비 <b>${M(r.dev)}</b>를 넣어 최고 <b>P${r.best}</b>, ${r.gained}포인트. 시즌 누적 개발비 ${M(S.ledger.dev)}로 ${S.points}포인트를 얻었으니 <b>1포인트당 ${M(S.points?S.ledger.dev/S.points:0)}</b>다. 절대 금액이 아니라 <b>단위당 얼마</b>를 봐야 잘 쓴 돈인지 알 수 있다.`,
+   en:`<b>${M(r.dev)}</b> of R&D bought a best finish of <b>P${r.best}</b> and ${r.gained} points. Season to date: ${M(S.ledger.dev)} of R&D for ${S.points} points - <b>${M(S.points?S.ledger.dev/S.points:0)} per point</b>. Judge spending per unit of result, not by the headline number.`};
+
+  if(r.best>=8||r.net<0)return{c:"fixvar",
+   ko:`상금은 ${M(r.prizeG)}인데 고정비 <b>${M(r.fixBase+r.fixSal)}</b>는 그대로 나갔다 — 기본 운영비 ${M(r.fixBase)} + 드라이버 연봉 ${M(r.fixSal)}. 변동비 ${M(r.varTyre+r.varRepair+r.varPractice)}는 타이어·부품·연습에 쓴 돈이라 활동량에 따라 변한다. 고정비가 큰 팀은 성적이 나쁠 때 훨씬 빨리 무너진다. 이번 라운드 순손익 <b>${r.net>=0?"+":""}${M(r.net)}</b>.`,
+   en:`Prize money was ${M(r.prizeG)} while fixed costs of <b>${M(r.fixBase+r.fixSal)}</b> went out regardless - ${M(r.fixBase)} of base operations plus ${M(r.fixSal)} of driver salaries. The ${M(r.varTyre+r.varRepair+r.varPractice)} of variable cost went on tyres, parts and practice, and moves with activity. High fixed costs sink a team fast when results dip. Round result: <b>${r.net>=0?"+":""}${M(r.net)}</b>.`};
+
+  return{c:"opp",
+   ko:`최고 <b>P${r.best<99?r.best:"—"}</b>, ${r.gained}포인트. 수익 ${M(r.revenue)} − 비용 ${M(r.costs+r.dev)} = <b>${r.net>=0?"+":""}${M(r.net)}</b>. 개발 ${M(r.dev)}, 마케팅 ${M(r.mk)}로 나눴다. 개발은 이번 주 순위를, 마케팅은 남은 시즌 전체의 수익을 산다. 어느 쪽에 쓰든 <b>포기한 다른 쪽</b>이 그 선택의 진짜 값이다.`,
+   en:`Best finish <b>P${r.best<99?r.best:"-"}</b>, ${r.gained} points. Revenue ${M(r.revenue)} − costs ${M(r.costs+r.dev)} = <b>${r.net>=0?"+":""}${M(r.net)}</b>. You split ${M(r.dev)} into R&D and ${M(r.mk)} into marketing. R&D buys this weekend's result; marketing buys income for every round that follows. Whichever you pick, <b>the one you gave up</b> is the true cost.`};
+}
+
+/* ═════════ 결과 화면 ═════════ */
+function renderResult(){
+  const r=S.lastResult;
+  const rows=r.order.slice(0,20).map((c,i)=>`<tr class="${c.me?"me":""}">
+    <td class="p">${c.out?"—":c.pos}</td>
+    <td class="tm"><span class="lv" style="background:${c.col}"></span>${c.name}</td>
+    <td class="gap ${c.out?"dnf":""}">${c.out?(LANG==="en"?"DNF · "+c.reason[1]:"DNF · "+c.reason[0]):
+      (c.pos===1?"LEADER":"+"+((c.time-r.order[0].time)).toFixed(1)+"s")}</td>
+    <td class="pt">${c.pt||""}</td></tr>`).join("");
+
+  const b=briefFor(r), C=CONCEPTS[b.c], fresh=unlock(b.c);
+  const bodyTxt=LANG==="en"?b.en:LANG==="ko"?b.ko:b.ko+`<span class="en2">${b.en}</span>`;
+  const defTxt =LANG==="en"?C.b[1]:LANG==="ko"?C.b[0]:C.b[0]+`<span class="en2">${C.b[1]}</span>`;
+
+  $("pResult").innerHTML=`
+   <div class="card"><div class="hd"><h2>${r.circuit}</h2>
+     <span class="tag">${r.best<99?"BEST P"+r.best:"NO FINISH"} · +${r.gained} PTS</span></div>
+     <div class="bd scroll"><table class="tt">
+       <tr><th>POS</th><th>${Bp("드라이버","DRIVER")}</th><th class="gap">${Bp("간격","GAP")}</th><th class="pt">PTS</th></tr>
+       ${rows}</table>
+       <p class="fine" style="margin:10px 0 0">${Bp("패스티스트랩","Fastest lap")}: <b style="color:#C77DFF">${r.fastest.name||"—"}</b> ${r.fastest.t<999?r.fastest.t.toFixed(2)+"s":""}
+       · ${Bp("우리 그리드","our grid")} P${r.grid.join(" / P")}</p></div></div>
+
+   <div class="card"><div class="hd"><h2>${B("라운드 손익","ROUND P&L")}</h2></div><div class="bd pl">
+     <div class="l"><span class="k">${Bi("상금 (2대 합계)","Prize money (both cars)")}</span><span class="pos">+${M(r.prizeG)}</span></div>
+     ${r.equityCut>0?`<div class="l ind"><span class="k">${Bi("투자자 지분 25%","Investor's 25%")}</span><span class="neg">−${M(r.equityCut)}</span></div>`:""}
+     <div class="l"><span class="k">${Bi("스폰서 수익","Sponsorship")}</span><span class="pos">+${M(r.sponsorRev)}</span></div>
+     <div class="l"><span class="k">${Bi("머천다이즈·중계권","Merchandise & TV rights")}</span><span class="pos">+${M(r.merch)}</span></div>
+     <div class="l"><span class="k">${Bi("현금 이자수익","Interest on cash")}</span><span class="pos">+${M(r.ie)}</span></div>
+     <div class="l sum"><span class="k">${Bi("수익 합계","Total revenue")}</span><span class="pos">+${M(r.revenue)}</span></div>
+     <div class="l" style="margin-top:9px"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span class="neg">−${M(r.fixBase)}</span></div>
+     <div class="l ind"><span class="k">${Bi("팩토리·직원·물류","factory, staff, freight")}</span><span class="muted">${M(r.fixBase)}</span></div>
+     <div class="l"><span class="k">${Bi("고정비 — 드라이버 연봉","Fixed - driver salaries")}</span><span class="neg">−${M(r.fixSal)}</span></div>
+     <div class="l"><span class="k">${Bi("변동비 — 타이어·부품","Variable - tyres & parts")}</span><span class="neg">−${M(r.varTyre)}</span></div>
+     ${r.varPractice>0?`<div class="l"><span class="k">${Bi("변동비 — 연습 셋업","Variable - practice setup")}</span><span class="neg">−${M(r.varPractice)}</span></div>`:""}
+     ${r.varRepair>0?`<div class="l"><span class="k">${Bi("변동비 — 사고 수리","Variable - crash repairs")}</span><span class="neg">−${M(r.varRepair)}</span></div>`:""}
+     ${r.mk>0?`<div class="l"><span class="k">${Bi("마케팅비","Marketing")}</span><span class="neg">−${M(r.mk)}</span></div>`:""}
+     ${r.interest>0?`<div class="l"><span class="k">${Bi("이자비용","Interest expense")}</span><span class="neg">−${M(r.interest)}</span></div>`:""}
+     ${r.dev>0?`<div class="l"><span class="k">${Bi("개발비","R&D")}</span><span class="neg">−${M(r.dev)}</span></div>`:""}
+     <div class="l sum"><span class="k">${Bi("라운드 순손익","Round net result")}</span>
+       <span class="${r.net>=0?"pos":"neg"}">${r.net>=0?"+":""}${M(r.net)}</span></div>
+     <div class="l" style="border:0;padding-top:8px"><span class="k">${Bi("브랜드 변화","Brand change")}</span>
+       <span class="${r.bGain+r.posBonus-0.7>=0?"pos":"neg"}">${r.bGain+r.posBonus-0.7>=0?"+":""}${(r.bGain+r.posBonus-0.7).toFixed(1)} → ${S.brand.toFixed(0)}</span></div>
+   </div></div>
+
+   <div class="card"><div class="hd"><h2>${B("팀 대표 브리핑","PRINCIPAL'S BRIEFING")}</h2><span class="tag">Economics</span></div>
+     <div class="bd"><div class="brief">
+       <div class="en">${C.k[1]}${fresh?" · "+Bp("새 개념","new concept"):""}</div>
+       <div class="ttl">${LANG==="en"?C.k[1]:C.k[0]}</div>
+       <p>${bodyTxt}</p>
+       ${fresh?`<p class="new">${defTxt}</p>`:""}
+     </div></div></div>
+
+   <button class="go" id="nextRound">${S.over?B("시즌 결산 보기","See season review"):B("다음 라운드","Next round")}</button>`;
+  save();
+}
+
+/* ═════════ 사이드바 ═════════ */
+function renderSide(){
+  const st=standings();
+  const ds=driverStandings().slice(0,10);
+  const L=S.ledger;
+  const rev=L.prize+L.spon+L.merch+L.ie;
+  const fixed=L.fixBase+L.fixSal;
+  const vari=L.varTyre+L.varRepair+L.varPractice;
+  const cost=L.dev+L.mk+fixed+vari+L.ip;
+  const ks=Object.keys(CONCEPTS);
+
+  $("side").innerHTML=`
+   <div class="card"><div class="hd"><h3>${B("컨스트럭터 순위","CONSTRUCTORS")}</h3><span class="tag">R${S.round}</span></div>
+     <div class="bd scroll" style="padding:11px"><table class="tt">
+       <tr><th>#</th><th>${Bp("팀","TEAM")}</th><th class="pt">PTS</th></tr>
+       ${st.map((t,i)=>`<tr class="${t.me?"me":""}"><td class="p">${i+1}</td>
+         <td class="tm"><span class="lv" style="background:${t.c}"></span>${t.n}</td>
+         <td class="pt">${t.pts}</td></tr>`).join("")}</table></div></div>
+
+   <div class="card"><div class="hd"><h3>${B("드라이버 순위","DRIVERS")}</h3><span class="tag">TOP 10</span></div>
+     <div class="bd scroll" style="padding:11px"><table class="tt">
+       ${ds.map((d,i)=>`<tr class="${d.me?"me":""}"><td class="p">${i+1}</td>
+         <td class="tm"><span class="lv" style="background:${d.c}"></span>${d.n}</td>
+         <td class="pt">${d.pts}</td></tr>`).join("")}</table></div></div>
+
+   <div class="card"><div class="hd"><h3>${B("재무 상태","FINANCES")}</h3><span class="tag">Cumulative</span></div>
+     <div class="bd pl">
+       <div class="l"><span class="k">${Bi("누적 수익","Revenue")}</span><span class="pos">${M(rev)}</span></div>
+       <div class="l ind"><span class="k">${Bi("상금","Prize")}</span><span>${M(L.prize)}</span></div>
+       <div class="l ind"><span class="k">${Bi("스폰서","Sponsor")}</span><span>${M(L.spon)}</span></div>
+       <div class="l ind"><span class="k">${Bi("머천·중계","Merch & TV")}</span><span>${M(L.merch)}</span></div>
+       <div class="l"><span class="k">${Bi("고정비","Fixed cost")}</span><span class="neg">${M(fixed)}</span></div>
+       <div class="l ind"><span class="k">${Bi("기본 운영","Base ops")}</span><span>${M(L.fixBase)}</span></div>
+       <div class="l ind"><span class="k">${Bi("드라이버 연봉","Salaries")}</span><span>${M(L.fixSal)}</span></div>
+       <div class="l"><span class="k">${Bi("변동비","Variable cost")}</span><span class="neg">${M(vari)}</span></div>
+       <div class="l ind"><span class="k">${Bi("타이어·부품","Tyres & parts")}</span><span>${M(L.varTyre)}</span></div>
+       ${L.varRepair>0?`<div class="l ind"><span class="k">${Bi("사고 수리","Repairs")}</span><span>${M(L.varRepair)}</span></div>`:""}
+       ${L.varPractice>0?`<div class="l ind"><span class="k">${Bi("연습 셋업","Practice")}</span><span>${M(L.varPractice)}</span></div>`:""}
+       <div class="l"><span class="k">${Bi("개발비","R&D")}</span><span class="neg">${M(L.dev)}</span></div>
+       <div class="l"><span class="k">${Bi("마케팅비","Marketing")}</span><span class="neg">${M(L.mk)}</span></div>
+       ${L.ip>0?`<div class="l"><span class="k">${Bi("이자비용","Interest")}</span><span class="neg">${M(L.ip)}</span></div>`:""}
+       <div class="l sum"><span class="k">${Bi("순손익","Net result")}</span>
+         <span class="${rev-cost>=0?"pos":"neg"}">${rev-cost>=0?"+":""}${M(rev-cost)}</span></div>
+       <div class="l" style="border:0;padding-top:7px"><span class="k">${Bi("포인트당 개발비","R&D per point")}</span>
+         <span>${S.points?M(L.dev/S.points):"—"}</span></div></div></div>
+
+   <div class="card"><div class="hd"><h3>${B("경제 개념","ECONOMICS")}</h3>
+     <span class="tag">${ks.filter(k=>S.concepts[k]).length} / ${ks.length} ${Bp("겪음","seen")}</span></div>
+     <div class="bd" style="padding:0"><div class="cc">${ks.map(k=>{
+       const c=CONCEPTS[k],on=!!S.concepts[k];
+       return `<details class="${on?"on":""}">
+         <summary><span class="dot"></span>${LANG==="en"?c.k[1]:c.k[0]}<span class="en">${on?Bp("겪음","SEEN"):""}</span></summary>
+         <div class="body">${LANG==="en"?c.b[1]:LANG==="ko"?c.b[0]:c.b[0]+`<span class="en2">${c.b[1]}</span>`}</div>
+       </details>`;}).join("")}</div></div></div>
+
+   <button class="go sec" id="reset">${B("팀 다시 고르기","Change team")}</button>`;
+}
+</script>
+<script>
+/* ═════════ 시즌 결산 ═════════ */
+function renderFinish(){
+  const final=S.cash-S.debt,pos=myPos(),tgt=T().target,L=S.ledger;
+  const rev=L.prize+L.spon+L.merch+L.ie;
+  const fixed=L.fixBase+L.fixSal, vari=L.varTyre+L.varRepair+L.varPractice;
+  const opCost=L.dev+L.mk+fixed+vari;
+  const op=rev-opCost, net=op-L.ip;
+  const capOK=S.capUsed<=CAP, solvent=final>=0, won=pos<=tgt&&solvent&&capOK;
+  const per=S.points?L.dev/S.points:0;
+  const mkPay=L.mk>0?(L.spon+L.merch)/L.mk:0;
+  const dnfN=S.results.reduce((x,r)=>x+r.dnf,0);
+
+  const verdict=won
+   ?[`<b>목표 달성.</b> ${S.name}으로 컨스트럭터 P${pos}, 파산 없이, 비용 상한을 지켰다. 세 조건이 동시에 어려운 이유는 서로를 잡아먹기 때문이다 — 순위를 사려면 돈을 써야 하고, 돈을 아끼면 순위가 떨어진다.`,
+     `<b>Target achieved.</b> P${pos} in the constructors' championship, no bankruptcy, cost cap respected. Those three fight each other: buying results costs money, and saving money costs results.`]
+   :!solvent
+   ?[`<b>파산.</b> 최종 순자산 ${M(final)}. 성적과 무관하게 팀은 문을 닫는다. 아무리 좋은 전략도 <b>현금이 떨어지면 끝난다</b> — 수익성과 유동성은 다른 문제다.`,
+     `<b>Bankrupt.</b> Final net worth ${M(final)}. The team folds regardless of results. Any strategy ends <b>when the cash runs out</b> - profitability and liquidity are not the same thing.`]
+   :!capOK
+   ?[`<b>비용 상한 초과.</b> ${M(S.capUsed)}로 $135.0M을 넘겼다. 규정 위반은 성적과 무관한 페널티다. 돈이 있다고 다 쓸 수 있는 건 아니다.`,
+     `<b>Cost cap breached.</b> You spent ${M(S.capUsed)} against a $135.0M limit. Breaking the rule is penalised regardless of results - having money doesn't mean you're allowed to spend it.`]
+   :[`컨스트럭터 <b>P${pos}</b> — 목표 P${tgt}에 닿지 못했다. 어디서 갈렸는지는 아래 손익계산서가 말해준다.`,
+     `<b>P${pos}</b> in the constructors' - short of the P${tgt} target. The income statement below shows where it went.`];
+
+  const notes=[];
+  notes.push([`<b>포인트당 개발비 ${S.points?M(per):"—"}</b> — ${!S.points?"포인트를 얻지 못했다."
+    :per<0.5?"매우 효율적이다. 다만 출발 차량이 좋았던 몫도 있다 — 이 숫자는 <b>내가 쓴 돈</b>만 세지, 물려받은 차는 세지 않는다."
+    :per<1.3?"적정 수준. 개발비가 성적으로 착실히 이어졌다."
+    :per<2.5?"다소 비싸다. 한계비용이 오른 뒤에도 계속 투자했을 가능성이 있다."
+    :"비싸다. 값이 오른 쪽에 계속 부었다 — 같은 돈이면 덜 개발된 쪽이 더 많은 성능을 줬을 것이다."}`,
+   `<b>R&D per point: ${S.points?M(per):"-"}</b> - ${!S.points?"you scored nothing."
+    :per<0.5?"very efficient - though some of that is the car you inherited. This number counts <b>what you spent</b>, not what you started with."
+    :per<1.3?"solid. Your spending converted into results."
+    :per<2.5?"a little expensive; you may have kept investing after marginal costs rose."
+    :"expensive. You kept pouring into the area that had already got costly."}`]);
+  notes.push([`<b>리타이어 ${dnfN}회 · 최종 신뢰성 ${S.rel}</b> — ${dnfN===0?"한 번도 차가 멈추지 않았다. 신뢰성 투자는 순위표에 안 보이지만 여기서 값을 했다."
+    :dnfN<=3?`리타이어 ${dnfN}회. 한 번 멈출 때마다 상금 차액과 수리비로 수백만 달러가 날아간다 — 신뢰성은 성능이 아니라 <b>보험</b>이다.`
+    :`리타이어 ${dnfN}회는 많다. 수리비만 ${M(L.varRepair)}. 빠른 차보다 <b>완주하는 차</b>가 먼저다.`}`,
+   `<b>${dnfN} retirements · final reliability ${S.rel}</b> - ${dnfN===0?"the cars never stopped. Reliability spending never shows on the timing screen, but it paid here."
+    :dnfN<=3?`${dnfN} retirements. Each one costs you prize money and repairs - reliability is <b>insurance</b>, not performance.`
+    :`${dnfN} retirements is a lot; repairs alone cost ${M(L.varRepair)}. A car that finishes beats a car that's fast.`}`]);
+  notes.push([`<b>드라이버 연봉 ${M(L.fixSal)}</b> — 전체 고정비의 ${(L.fixSal/fixed*100).toFixed(0)}%다. 이 돈으로 개발을 했다면 에어로를 약 ${Math.round(L.fixSal/1.5)}포인트 올릴 수 있었다. 드라이버는 자산이자 <b>고정비</b>다.`,
+   `<b>Driver salaries: ${M(L.fixSal)}</b> - ${(L.fixSal/fixed*100).toFixed(0)}% of your fixed costs. That money could have bought roughly ${Math.round(L.fixSal/1.5)} aero points instead. Drivers are an asset and a <b>fixed cost</b> at the same time.`]);
+  notes.push([`<b>마케팅 회수배수 ${L.mk>0?mkPay.toFixed(1)+"배":"미집행"}</b> — ${L.mk===0?"마케팅을 전혀 하지 않았다. 브랜드는 매 라운드 0.7씩 자연 감소한다."
+    :mkPay>4?"브랜드 투자가 확실히 회수됐다. 일찍 집행한 덕이다.":"회수가 약하다. 마케팅은 남은 라운드가 많을 때 해야 시간이 일해준다."}`,
+   `<b>Marketing return: ${L.mk>0?mkPay.toFixed(1)+"x":"none spent"}</b> - ${L.mk===0?"you never marketed. Brand decays 0.7 per round on its own."
+    :mkPay>4?"the brand investment clearly paid back - because you spent it early.":"weak payback. Marketing needs rounds left to earn it back."}`]);
+  notes.push([`<b>자금 조달</b> — ${S.equitySold&&L.eq>0?`지분 매각으로 $25.0M을 받고 상금 중 ${M(L.eq)}를 넘겼다. ${L.eq>25?"받은 돈보다 더 냈다 — 성공할수록 지분은 비싸다.":"받은 돈보다 적게 냈다."}`
+    :L.ip>0?`대출 이자로 ${M(L.ip)}를 냈다. 순위와 무관하게 나간 돈이다.`
+    :"외부 자금 없이 자체 현금만으로 운영했다. 이자도 지분 희석도 없었지만, 초반에 쓸 수 있는 돈이 그만큼 적었다."}`,
+   `<b>Financing</b> - ${S.equitySold&&L.eq>0?`you took $25.0M for equity and handed back ${M(L.eq)} of prize money. ${L.eq>25?"You paid back more than you received - equity gets expensive when you succeed.":"You paid back less than you received."}`
+    :L.ip>0?`You paid ${M(L.ip)} in interest - money that left regardless of results.`
+    :"You ran on your own cash. No interest, no dilution - but less to spend when it mattered most."}`]);
+  notes.push([`<b>겪은 경제 개념 ${Object.keys(S.concepts).length} / ${Object.keys(CONCEPTS).length}</b> — 아직 안 겪은 개념은 오른쪽 목록에서 설명을 읽을 수 있다. <b>다른 팀</b>으로 한 시즌 더 돌리면 전혀 다른 개념이 나온다.`,
+   `<b>Concepts experienced: ${Object.keys(S.concepts).length} / ${Object.keys(CONCEPTS).length}</b> - you can read the rest in the sidebar. Run a season with <b>a different team</b> and completely different lessons come up.`]);
+
+  const bi=(a)=>LANG==="en"?a[1]:LANG==="ko"?a[0]:a[0]+`<span class="en2">${a[1]}</span>`;
+
+  $("pFinish").innerHTML=`
+   <div class="card ${won?"won":""}"><div class="hd"><h2>${won?B("시즌 성공","SEASON SUCCESS"):B("시즌 종료","SEASON OVER")}</h2>
+     <span class="tag">Final</span></div><div class="bd">
+     <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px">
+       <span class="pill ${pos<=tgt?"g":"r"}">P${pos} · ${Bp("목표","target")} P${tgt}</span>
+       <span class="pill ${solvent?"g":"r"}">${Bp("순자산","net worth")} ${M(final)}</span>
+       <span class="pill ${capOK?"g":"r"}">${Bp("비용 상한","cost cap")} ${capOK?Bp("준수","OK"):Bp("초과","breached")}</span>
+       <span class="pill y">${S.points} PTS</span>
+       <span class="pill">${Bp("리타이어","DNF")} ${dnfN}</span></div>
+     <p style="margin:0">${bi(verdict)}</p></div></div>
+
+   <div class="card"><div class="hd"><h2>${B("시즌 손익계산서","SEASON INCOME STATEMENT")}</h2></div><div class="bd pl">
+     <div class="l sum" style="margin-top:0;border-top:0;padding-top:0"><span class="k">${Bi("매출","Revenue")}</span><span class="pos">${M(rev)}</span></div>
+     <div class="l ind"><span class="k">${Bi("상금 수익","Prize money")}</span><span>${M(L.prize)}</span></div>
+     <div class="l ind"><span class="k">${Bi("스폰서 수익","Sponsorship")}</span><span>${M(L.spon)}</span></div>
+     <div class="l ind"><span class="k">${Bi("머천다이즈·중계권","Merchandise & TV")}</span><span>${M(L.merch)}</span></div>
+     <div class="l ind"><span class="k">${Bi("이자수익","Interest income")}</span><span>${M(L.ie)}</span></div>
+     <div class="l sum"><span class="k">${Bi("영업비용","Operating costs")}</span><span class="neg">${M(opCost)}</span></div>
+     <div class="l ind"><span class="k">${Bi("고정비 — 기본 운영","Fixed - base operations")}</span><span>${M(L.fixBase)}</span></div>
+     <div class="l ind"><span class="k">${Bi("고정비 — 드라이버 연봉","Fixed - driver salaries")}</span><span>${M(L.fixSal)}</span></div>
+     <div class="l ind"><span class="k">${Bi("변동비 — 타이어·부품","Variable - tyres & parts")}</span><span>${M(L.varTyre)}</span></div>
+     <div class="l ind"><span class="k">${Bi("변동비 — 사고 수리","Variable - crash repairs")}</span><span>${M(L.varRepair)}</span></div>
+     <div class="l ind"><span class="k">${Bi("변동비 — 연습 셋업","Variable - practice setup")}</span><span>${M(L.varPractice)}</span></div>
+     <div class="l ind"><span class="k">${Bi("개발비 (R&D)","R&D")}</span><span>${M(L.dev)}</span></div>
+     <div class="l ind"><span class="k">${Bi("마케팅비","Marketing")}</span><span>${M(L.mk)}</span></div>
+     <div class="l sum"><span class="k">${Bi("영업이익","Operating profit")}</span>
+       <span class="${op>=0?"pos":"neg"}">${op>=0?"+":""}${M(op)}</span></div>
+     <div class="l"><span class="k">${Bi("이자비용","Interest expense")}</span><span class="neg">−${M(L.ip)}</span></div>
+     ${L.eq>0?`<div class="l"><span class="k">${Bi("투자자에게 넘긴 상금 (참고)","Prize money given to investor (memo)")}</span><span class="neg">${M(L.eq)}</span></div>`:""}
+     <div class="l sum"><span class="k">${Bi("순이익","Net profit")}</span>
+       <span class="${net>=0?"pos":"neg"}">${net>=0?"+":""}${M(net)}</span></div>
+     <div class="l" style="border:0;padding-top:8px"><span class="k">${Bi("시작 현금 + 순이익 + 조달 = 최종 현금","Start cash + net profit + financing = final cash")}</span>
+       <span>${M(S.cash)}</span></div></div></div>
+
+   <div class="card"><div class="hd"><h2>${B("팀 대표 평가","REPORT CARD")}</h2></div><div class="bd">
+     ${notes.map(n=>`<p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.62">${bi(n)}</p>`).join("")}</div></div>
+
+   <button class="go" id="again">${B("새 시즌 시작","Start a new season")}</button>`;
+}
+
+/* ═════════ 설명서 ═════════ */
+function renderManual(){
+  const bi=a=>LANG==="en"?a[1]:LANG==="ko"?a[0]:a[0]+`<span class="en2">${a[1]}</span>`;
+  const sec=(ko,en,body)=>`<div class="msec"><h3>${LANG==="en"?en:LANG==="ko"?ko:ko+" · "+en}</h3>${body}</div>`;
+  const item=(t,v,d)=>`<div class="mitem"><div class="mt">${LANG==="en"?t[1]:t[0]}</div>
+    <div class="mv">${v}</div><div class="md">${bi(d)}</div></div>`;
+
+  $("manHd").innerHTML=Bp("설명서","Manual");
+  $("closeManual").innerHTML=Bp("닫기","Close");
+  $("manBody").innerHTML=
+   sec("게임의 목표","The goal",`<p>${bi([
+     "시즌 10라운드를 운영해 <b>세 가지를 동시에</b> 달성한다. ① 팀별 목표 순위 안에 들기 ② 파산하지 않기(최종 순자산 0 이상) ③ FIA 비용 상한 $135M 지키기. 이 셋은 서로 싸운다 — 순위를 사려면 돈을 써야 하고, 돈을 아끼면 순위가 떨어진다.",
+     "Run a 10-round season and hit <b>three things at once</b>: (1) finish inside your team's target position, (2) don't go bankrupt (final net worth at or above zero), (3) stay under the FIA's $135M cost cap. They fight each other - buying results costs money, and saving money costs results."])}</p>`)+
+
+   sec("주말 진행","The race weekend",`<div class="mgrid">
+     ${item(["① 팀 운영 (패독)","1. Paddock"],Bp("돈을 쓰는 곳","where money is spent"),
+       ["개발·마케팅·스폰서 계약·전략·자금 조달·드라이버를 결정한다. 레이스가 시작되면 바꿀 수 없다.",
+        "Set R&D, marketing, sponsor deal, race strategy, financing and drivers. Once the race starts, nothing can be changed."])}
+     ${item(["② 연습 (금요일)","2. Practice (Friday)"],Bp("정보를 얻는 곳","where information appears"),
+       ["드라이버 <b>컨디션</b>이 드러난다. 컨디션은 매주 달라지고 페이스에 직접 반영된다. 셋업에 돈을 쓰면 조금 올릴 수 있다.",
+        "Reveals each driver's <b>condition</b> for the weekend, which feeds straight into pace. Paying for a setup programme nudges it up."])}
+     ${item(["③ 퀄리파잉 (토요일)","3. Qualifying (Saturday)"],Bp("출발 순서","the starting order"),
+       ["결승 그리드가 정해진다. 한계까지 밀어붙이면 페이스가 오르지만 10% 확률로 랩을 망친다.",
+        "Sets the race grid. Maximum attack gains pace but ruins the lap 10% of the time."])}
+     ${item(["④ 결승 (일요일)","4. Race (Sunday)"],Bp("랩 바이 랩 중계","lap-by-lap broadcast"),
+       ["실제 랩 수만큼 진행되며 순위·추월·피트인·리타이어가 실시간으로 나온다. 속도는 조절할 수 있다.",
+        "Runs the real lap count with live positions, overtakes, pit stops and retirements. You can change the playback speed."])}
+   </div>`)+
+
+   sec("수익 3종","Three revenue streams",`<div class="mgrid">
+     ${item(["상금","Prize money"],Bp("차량 1대당 순위별","per car, by finishing position"),
+       ["두 대가 각각 순위에 따라 받는다. 1위 $7.0M부터 20위 $0.5M까지. 리타이어는 $0.8M.",
+        "Each of your two cars earns by where it finishes - $7.0M for a win down to $0.5M for 20th. A retirement pays $0.8M."])}
+     ${item(["스폰서","Sponsorship"],Bp("계약 형태 × 브랜드 배수","deal type × brand multiplier"),
+       ["안정형·성과형·타이틀 중 매 라운드 고른다. 금액은 <b>브랜드 지수</b>에 비례해 커진다.",
+        "Pick guaranteed, performance-based or title each round. The amount scales with your <b>brand index</b>."])}
+     ${item(["머천다이즈·중계권","Merchandise & TV"],Bp("브랜드 지수에만 비례","brand index only"),
+       ["성적과 거의 무관하게 브랜드 지수에서 나온다. <b>마케팅 투자가 여기로 돌아온다.</b>",
+        "Comes almost entirely from your brand index, not results. <b>This is where marketing pays back.</b>"])}
+   </div>`)+
+
+   sec("비용 4종 — 어디에 쓰이는가","Four cost types - where the money goes",`<div class="mgrid">
+     ${item(["고정비 · 기본 운영","Fixed - base operations"],Bp("매 라운드 동일","same every round"),
+       ["<b>팩토리 임대료, 엔지니어·미캐닉 급여, 팀 물류·운송비, 본부 운영비.</b> 우승해도 꼴찌해도 똑같이 나간다. 팀마다 다르다 — HALCYON $2.0M, MERIDIAN $7.0M, APEX $14.5M.",
+        "<b>Factory lease, engineer and mechanic salaries, freight and logistics, HQ overheads.</b> Identical whether you win or finish last. It differs by team: HALCYON $2.0M, MERIDIAN $7.0M, APEX $14.5M."])}
+     ${item(["고정비 · 드라이버 연봉","Fixed - driver salaries"],Bp("계약한 순간 확정","locked in when you sign"),
+       ["1군 2명 + 아카데미 드라이버의 연봉 합계. 성적과 <b>무관하게</b> 매 라운드 나간다. 스타를 영입하면 즉시 빨라지지만 이 부담이 시즌 내내 따라온다.",
+        "The combined salaries of your two race drivers plus academy drivers. Paid every round <b>regardless</b> of results. Signing a star makes you fast immediately, but the burden follows you all season."])}
+     ${item(["변동비 · 타이어와 부품","Variable - tyres & parts"],Bp("전략에 따라 변동","depends on strategy"),
+       ["<b>타이어 세트, 브레이크·기어박스 등 소모품, 주말 운영 물자.</b> 공격적으로 달릴수록 많이 쓴다 — 보수 $1.6M, 균형 $2.8M, 공격 $5.2M(2대분).",
+        "<b>Tyre sets, brakes, gearboxes and other consumables, weekend running materials.</b> The harder you push, the more you use - $1.6M conservative, $2.8M balanced, $5.2M aggressive (both cars)."])}
+     ${item(["변동비 · 사고 수리와 연습","Variable - repairs & practice"],Bp("사건이 있을 때만","only when it happens"),
+       ["리타이어 1대당 <b>$1.6M</b>의 수리비. 연습 셋업 프로그램은 <b>$1.2M</b>. 둘 다 활동량에 따라 발생하므로 변동비다.",
+        "Each retirement costs <b>$1.6M</b> in repairs. A practice setup programme costs <b>$1.2M</b>. Both scale with activity, so both are variable."])}
+   </div>
+   <p style="margin-top:10px">${bi([
+     "<b>왜 이 구분이 중요한가:</b> 고정비가 큰 팀(APEX $21.5M/라운드)은 성적이 나빠도 그 돈이 계속 나가서 순식간에 무너진다. 고정비가 작은 팀(HALCYON $3.2M)은 적게 벌어도 버틴다. 같은 실수를 해도 <b>결과가 완전히 다르다.</b>",
+     "<b>Why the distinction matters:</b> a team with high fixed costs (APEX at $21.5M per round) keeps paying that money even when results collapse, so it fails fast. A team with low fixed costs (HALCYON at $3.2M) survives on very little. The same mistake produces <b>completely different outcomes.</b>"])}</p>`)+
+
+   sec("자금 조달 2종","Two ways to raise money",`<div class="mgrid">
+     ${item(["대출","Debt / loan"],Bp("이자 4%/라운드 · 한도 $30M","4% per round · limit $30M"),
+       ["즉시 현금을 얻지만 매 라운드 이자가 나가고 시즌 말에 원금을 갚아야 한다. <b>성적과 무관하게</b> 비용이 같다 — 성공하면 싼 돈, 실패하면 목을 조르는 돈.",
+        "Cash now, but interest every round and the principal is due at season end. The cost is the same <b>regardless of results</b> - cheap money if you succeed, a noose if you don't."])}
+     ${item(["지분 투자","Equity"],Bp("$25M · 상금의 25% 영구 양도","$25M · 25% of prize money, forever"),
+       ["갚을 의무가 없다. 대신 이후 <b>모든</b> 상금의 25%를 넘긴다. 성적이 좋아질수록 비싸진다 — 성공에 대한 과세와 같다.",
+        "Never repaid. Instead you hand over 25% of <b>all</b> future prize money. It gets more expensive the better you do - effectively a tax on success."])}
+   </div>`)+
+
+   sec("브랜드와 마케팅 채널","Brand and marketing channels",`
+     <p>${bi(["브랜드 지수는 스폰서 수익과 머천다이즈 수익을 <b>곱으로</b> 키운다. 매 라운드 0.7씩 자연 감소하고, 포디움에 오르면 저절로 오른다. 채널마다 성격이 다르다:",
+       "Your brand index <b>multiplies</b> sponsorship and merchandise income. It decays 0.7 per round on its own and rises when you reach the podium. Each channel behaves differently:"])}</p>
+     <div class="mgrid">${CHANNELS.map(c=>item(c.t,`$${c.cost}M`,c.d)).join("")}</div>`)+
+
+   sec("드라이버","Drivers",`<p>${bi([
+     "1군 2명이 출전하고 <b>둘 다 점수를 딴다</b>. 실력(Skill)은 페이스에 직접 반영되고, 안정성(Consistency)은 랩타임의 흔들림을 줄인다. 컨디션은 주말마다 달라진다.<br><br><b>아카데미(2군)</b> 드라이버는 연봉이 싸고 매 라운드 실력이 오른다 — 시간이 걸리는 대신 값싼 투자다. <b>영입 시장</b>에서 스타를 데려오면 즉시 빨라지지만 계약금(연봉 2배)을 내고 연봉이 고정비에 얹힌다. 밀려난 드라이버는 아카데미로 간다.",
+     "Both race drivers <b>score points</b>. Skill feeds directly into pace; consistency reduces lap-time scatter. Condition changes every weekend.<br><br><b>Academy</b> drivers are cheap and gain skill every round - a slow but inexpensive investment. Signing a star from the <b>driver market</b> makes you fast immediately, but costs an upfront fee (2x salary) and adds to your fixed costs forever. The displaced driver moves to the academy."])}</p>`)+
+
+   sec("점수 체계","Scoring",`<p>${bi([
+     "실제 F1 규정과 같다. 1위부터 <b>25 · 18 · 15 · 12 · 10 · 8 · 6 · 4 · 2 · 1</b>점, 10위까지. 패스티스트랩을 기록하고 10위 안에 들면 <b>+1점</b>. 컨스트럭터 점수는 두 드라이버의 합계다.",
+     "Same as real F1: <b>25, 18, 15, 12, 10, 8, 6, 4, 2, 1</b> points for the top ten. The fastest lap adds <b>+1</b> if that driver finishes in the top ten. Constructors' points are the sum of both drivers."])}</p>`)+
+
+   sec("경제 개념 10가지","The ten economic concepts",
+     `<div class="mgrid">${Object.values(CONCEPTS).map(c=>
+       `<div class="mitem"><div class="mt">${LANG==="en"?c.k[1]:c.k[0]}</div>
+        <div class="mv">${LANG==="ko"?c.k[1]:""}</div>
+        <div class="md">${bi(c.b)}</div></div>`).join("")}</div>`);
+}
+</script>
+<script>
+/* ═════════ 화면 라우터 ═════════ */
+const PANES=["pPaddock","pPractice","pQuali","pRace","pResult","pFinish"];
+function show(id){PANES.forEach(p=>$(p).classList.toggle("hide",p!==id));}
+
+function renderGame(){
+  paintTeam(T());
+  renderHeader(); renderStats(); renderPhases(); renderSide();
+  if(S.over&&S.phase==="finish"){renderFinish();show("pFinish");return;}
+  switch(S.phase){
+    case "paddock": renderPaddock(); show("pPaddock"); break;
+    case "practice":renderPractice();show("pPractice");break;
+    case "quali":   renderQuali();   show("pQuali");   break;
+    case "race":    if(!RACE||RACE.done===undefined)initRace();
+                    renderRaceShell(); show("pRace");  break;
+    case "result":  renderResult();  show("pResult");  break;
+  }
+}
+function rerender(){ if(S) renderGame(); else renderSelect(); }
+
+/* ═════════ 이벤트 ═════════ */
+document.addEventListener("click",e=>{
+  const t=e.target;
+
+  // 언어
+  const lb=t.closest("[data-lang]");
+  if(lb){LANG=lb.dataset.lang;
+    document.querySelectorAll("#langseg button").forEach(b=>b.classList.toggle("on",b===lb));
+    if(!$("manual").classList.contains("hide"))renderManual();
+    rerender(); return;}
+
+  // 설명서
+  if(t.closest("#openManual")){renderManual();$("manual").classList.remove("hide");document.body.style.overflow="hidden";return;}
+  if(t.closest("#closeManual")){$("manual").classList.add("hide");document.body.style.overflow="";return;}
+
+  // 팀 선택
+  const tb=t.closest("[data-team]");
+  if(tb){picked=tb.dataset.team;paintTeam(TEAMS[picked]);
+    $("tname").value=TEAMS[picked].n;$("start").disabled=false;renderSelect();return;}
+  if(t.closest("#start")&&picked){
+    S=newState(picked,($("tname").value.trim().toUpperCase()||TEAMS[picked].n));
+    $("select").classList.add("hide");$("game").classList.remove("hide");
+    renderGame();save();return;}
+
+  if(!S)return;
+
+  // 개발
+  const bb=t.closest("[data-buy]");
+  if(bb){const k=bb.dataset.buy,n=+bb.dataset.n;
+    for(let i=0;i<n;i++){
+      const cur=k==="a"?S.a:k==="p"?S.p:S.rel; if(cur>=100)break;
+      const c=mcOf(k); if(S.cash<c||capAvail()<c)break;
+      S.cash-=c;S.capUsed+=c;S.devRound+=c;S.ledger.dev+=c;
+      if(k==="a")S.a++;else if(k==="p")S.p++;else S.rel++;
+      unlock("dim");unlock("opp");}
+    save();renderGame();return;}
+
+  // 마케팅 채널 토글
+  const cb=t.closest("[data-chan]");
+  if(cb&&!cb.disabled){const id=cb.dataset.chan;
+    const i=S.mkList.indexOf(id);
+    if(i>=0)S.mkList.splice(i,1);
+    else{const C=CHANNELS.find(x=>x.id===id);
+      if(mkPlanned()+C.cost<=S.cash){S.mkList.push(id);unlock("brand");}}
+    save();renderGame();return;}
+
+  // 스폰서 / 전략 / 자금
+  const sb=t.closest("[data-sp]");
+  if(sb&&!sb.disabled){S.sponsor=sb.dataset.sp;unlock("ev");save();renderGame();return;}
+  const stb=t.closest("[data-st]");
+  if(stb){S.strat=stb.dataset.st;unlock("risk");save();renderGame();return;}
+  const fb=t.closest("[data-fin]");
+  if(fb&&!fb.disabled){const a=fb.dataset.fin;
+    if(a==="loan"&&S.debt+10<=LOAN_MAX){S.debt+=10;S.cash+=10;}
+    else if(a==="repay"){const amt=Math.min(10,S.debt,S.cash);S.debt-=amt;S.cash-=amt;}
+    else if(a==="equity"&&!S.equitySold){S.equitySold=true;S.cash+=EQ_CASH;}
+    unlock("fund");save();renderGame();return;}
+
+  // 드라이버
+  const db=t.closest("[data-drv]");
+  if(db&&!db.disabled){const act=db.dataset.drv,i=+db.dataset.i;
+    if(act==="demote"&&S.academy.length<3){
+      const d=S.seats[i];
+      if(S.academy.length===0){alert(Bp("아카데미에 대체할 드라이버가 없다.","No academy driver to replace them."));return;}
+      const up=S.academy.shift();
+      S.academy.push({n:d.n,s:d.s,c:d.c,sal:d.sal,age:d.age});
+      S.seats[i]={n:up.n,s:up.s,c:up.c,sal:up.sal,age:up.age,no:i+1,pts:d.pts,cond:1};
+      unlock("human");}
+    else if(act==="promote"){
+      const up=S.academy[i];
+      const worst=S.seats[0].s<=S.seats[1].s?0:1;
+      const d=S.seats[worst];
+      S.academy[i]={n:d.n,s:d.s,c:d.c,sal:d.sal,age:d.age};
+      S.seats[worst]={n:up.n,s:up.s,c:up.c,sal:up.sal,age:up.age,no:worst+1,pts:d.pts,cond:1};
+      unlock("human");}
+    else if(act==="sign"){
+      const nd=S.market[i], fee=nd.sal*2;
+      if(S.cash<fee)return;
+      S.cash-=fee; S.ledger.severance+=fee;
+      const worst=S.seats[0].s<=S.seats[1].s?0:1;
+      const d=S.seats[worst];
+      S.market.splice(i,1);
+      if(S.academy.length<3)S.academy.push({n:d.n,s:d.s,c:d.c,sal:d.sal,age:d.age});
+      S.seats[worst]={n:nd.n,s:nd.s,c:nd.c,sal:nd.sal,age:nd.age,no:worst+1,pts:d.pts,cond:1};
+      unlock("human");unlock("opp");}
+    save();renderGame();return;}
+
+  // 연습 옵션
+  const pb=t.closest("[data-prac]");
+  if(pb&&!pb.disabled){S.practiceSpend=pb.dataset.prac==="1"?1.2:0;save();renderGame();return;}
+  // 퀄리 모드
+  const qb=t.closest("[data-q]");
+  if(qb&&!qb.disabled){S.qMode=qb.dataset.q;unlock("risk");save();renderGame();return;}
+
+  // 단계 전환
+  if(t.closest("#toPractice")){
+    S.mkRound=mkPlanned();
+    if(S.mkRound>S.cash){S.mkRound=0;S.mkList=[];}
+    if(capAvail()<12)unlock("scarcity");
+    unlock("fixvar");
+    S.phase="practice";save();renderGame();return;}
+  if(t.closest("#runPractice")){
+    if(S.practiceSpend>0&&S.cash<S.practiceSpend){S.practiceSpend=0;}
+    runPractice();renderGame();return;}
+  if(t.closest("#toQuali")){S.phase="quali";save();renderGame();return;}
+  if(t.closest("#runQuali")){runQuali();renderGame();return;}
+  if(t.closest("#toRace")){S.phase="race";RACE=null;save();renderGame();startRace();return;}
+  if(t.closest("#toResult")){
+    if(raceTimer){clearTimeout(raceTimer);raceTimer=null;}
+    settleRace();RACE=null;renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+  if(t.closest("#nextRound")){
+    if(S.over){S.phase="finish";save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+    S.phase="paddock";save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+
+  // 속도
+  const spb=t.closest("[data-spd]");
+  if(spb){raceSpeed=+spb.dataset.spd;
+    document.querySelectorAll("#spdSeg button").forEach(b=>b.classList.toggle("on",b===spb));
+    if(RACE&&!RACE.done)tickRace(); return;}
+
+  if(t.closest("#again")||t.closest("#reset"))restart();
+});
+
+function restart(){
+  if(raceTimer){clearTimeout(raceTimer);raceTimer=null;}
+  wipe();S=null;picked=null;RACE=null;
+  document.documentElement.style.setProperty("--team","#E3002B");
+  document.documentElement.style.setProperty("--team2","#FFC500");
+  $("game").classList.add("hide");$("select").classList.remove("hide");
+  $("start").disabled=true;$("tname").value="";
+  renderSelect();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ═════════ 부팅 ═════════ */
+renderSelect();
+(function boot(){
+  const s=loadS();
+  if(s&&s.tk&&TEAMS[s.tk]&&s.round!==undefined){
+    S=s;picked=s.tk;
+    if(S.phase==="race"){S.phase="quali";S.grid=null;}   // 중계 도중 새로고침 → 퀄리로 복귀
+    if(S.practiceDone===undefined)S.practiceDone=(S.phase!=="practice");
+    if(S.over&&S.phase!=="result")S.phase="finish";
+    $("select").classList.add("hide");$("game").classList.remove("hide");
+    renderGame();
+  }
+})();
+</script>
+</body>
+</html>
