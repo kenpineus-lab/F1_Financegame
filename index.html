@@ -2268,6 +2268,7 @@ function adoptState(st){
   if(S.over&&S.phase!=="result")S.phase="finish";
   $("select").classList.add("hide"); $("game").classList.remove("hide");
   save(); renderGame();
+  try{toTop();}catch(e){}
   return true;
 }
 function loadFromSlot(n){
@@ -2654,6 +2655,35 @@ function renderCFO(){
 }
 </script>
 <script>
+/* ═════════ 스크롤 ═════════
+   단계가 바뀌면 새로 볼 곳으로 옮긴다. 이미 잘 보이면 건드리지 않는다. */
+/* 부드러운 스크롤(behavior:"smooth")은 일부 브라우저·웹뷰에서 무시된다.
+   기능이 조용히 죽는 것보다 즉시 이동이 낫다. */
+function scrollToEl(el,offset,thresh){
+  if(!el)return;
+  /* 화면이 바뀌면 문서 높이가 줄어 브라우저가 스크롤 위치를 잘라낸다.
+     레이아웃이 정착한 뒤에 재야 정확하다. requestAnimationFrame 은 탭이
+     백그라운드면 멈추므로 setTimeout 을 쓴다. */
+  setTimeout(()=>{
+    // 창이 숨겨져 있으면 innerHeight 가 0으로 보고된다 — 최소값을 둔다
+    const vh=Math.max(window.innerHeight||0,480);
+    const r=el.getBoundingClientRect();
+    // 이미 화면에 충분히 보이면 건드리지 않는다 (큰 화면에서 불필요한 점프 방지)
+    if(r.top>=0 && r.top<=vh*(thresh==null?0.6:thresh))return;
+    const y=window.scrollY+r.top-(offset==null?10:offset);
+    const max=Math.max(0,document.documentElement.scrollHeight-vh);
+    window.scrollTo({top:Math.min(Math.max(0,y),max),behavior:"auto"});
+  },0);
+}
+const toTop=()=>setTimeout(()=>window.scrollTo({top:0,behavior:"auto"}),0);
+/* 주말 단계 전환 — 단계 표시줄이 맨 위에 오도록 */
+const focusPhase=()=>scrollToEl($("phases"),8);
+/* 같은 화면에 새 내용이 붙은 경우 — 그 내용으로 */
+function focusNew(sel){
+  const el=document.querySelector(sel);
+  if(el)scrollToEl(el,64); else focusPhase();
+}
+
 /* ═════════ 화면 라우터 ═════════ */
 const PANES=["pPaddock","pPractice","pQuali","pRace","pResult","pFinish"];
 function show(id){PANES.forEach(p=>$(p).classList.toggle("hide",p!==id));}
@@ -2742,7 +2772,7 @@ document.addEventListener("click",e=>{
     S=newState(picked,($("tname").value.trim().toUpperCase()||TEAMS[picked].n));
     rollEvent();
     $("select").classList.add("hide");$("game").classList.remove("hide");
-    renderGame();save();return;}
+    renderGame();save();toTop();return;}
 
   if(!S)return;
 
@@ -2843,19 +2873,19 @@ document.addEventListener("click",e=>{
     if(S.mkRound>S.cash){S.mkRound=0;S.mkList=[];}
     if(capAvail()<12)unlock("scarcity");
     unlock("fixvar");
-    S.phase="practice";save();renderGame();return;}
+    S.phase="practice";save();renderGame();focusPhase();return;}
   if(t.closest("#runPractice")){
     if(S.practiceSpend>0&&S.cash<S.practiceSpend){S.practiceSpend=0;}
-    runPractice();renderGame();return;}
-  if(t.closest("#toQuali")){S.phase="quali";save();renderGame();return;}
-  if(t.closest("#runQuali")){runQuali();renderGame();return;}
-  if(t.closest("#toRace")){S.phase="race";RACE=null;save();renderGame();startRace();return;}
+    runPractice();renderGame();focusNew("#pPractice .drv");return;}
+  if(t.closest("#toQuali")){S.phase="quali";save();renderGame();focusPhase();return;}
+  if(t.closest("#runQuali")){runQuali();renderGame();focusNew("#pQuali table.tt");return;}
+  if(t.closest("#toRace")){S.phase="race";RACE=null;save();renderGame();focusPhase();startRace();return;}
   if(t.closest("#toResult")){
     if(raceTimer){clearTimeout(raceTimer);raceTimer=null;}
-    settleRace();RACE=null;renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+    settleRace();RACE=null;renderGame();toTop();return;}
   if(t.closest("#nextRound")){
-    if(S.over){S.phase="finish";save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
-    S.phase="paddock";rollEvent();save();renderGame();window.scrollTo({top:0,behavior:"smooth"});return;}
+    if(S.over){S.phase="finish";save();renderGame();toTop();return;}
+    S.phase="paddock";rollEvent();save();renderGame();toTop();return;}
 
   // 속도
   const spb=t.closest("[data-spd]");
@@ -2864,7 +2894,7 @@ document.addEventListener("click",e=>{
     if(RACE&&!RACE.done)tickRace(); return;}
 
   if(t.closest("#nextSeason")){
-    nextSeason(); rollEvent(); renderGame(); window.scrollTo({top:0,behavior:"smooth"}); return;}
+    nextSeason(); rollEvent(); renderGame(); toTop(); return;}
   if(t.closest("#again")||t.closest("#reset"))restart();
 });
 
@@ -2885,7 +2915,7 @@ function restart(){
   document.documentElement.style.setProperty("--team2","#FFC500");
   $("game").classList.add("hide");$("select").classList.remove("hide");
   $("start").disabled=true;$("tname").value="";
-  renderSelect();window.scrollTo({top:0,behavior:"smooth"});
+  renderSelect();toTop();
 }
 
 /* ═════════ 부팅 ═════════ */
