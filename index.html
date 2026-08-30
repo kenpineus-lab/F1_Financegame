@@ -394,6 +394,48 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
 .ev-bad{--evc:var(--red);--evbg:#2A0611}
 .ev-choice{--evc:var(--yellow);--evbg:#2A2000}
 
+/* ── teaching aids ── */
+.spark{width:100%;height:26px;display:block;margin-top:5px;overflow:visible}
+.sp-line{fill:none;stroke:var(--yellow);stroke-width:1.6;opacity:.85;vector-effect:non-scaling-stroke}
+.sp-now{stroke:var(--ink2);stroke-width:1;stroke-dasharray:2 2;vector-effect:non-scaling-stroke;opacity:.6}
+.sp-dot{fill:var(--yellow)}
+
+.evbox{margin-top:11px;background:#070C1C;border:1px solid var(--line);border-radius:2px;padding:11px 13px}
+.evbox .eh2{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.evbox .eh2 .t2{font-family:var(--disp);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.evbox .eh2 .p2{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink2)}
+.evrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:baseline;padding:4px 0;
+  border-bottom:1px solid #131E3C;font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+.evrow:last-of-type{border-bottom:0}
+.evrow .calc{color:var(--dim);font-size:10.5px}
+.evrow .val2{font-weight:700}
+.evrow.best .val2{color:var(--green)}
+.evrow.best .nm2{color:var(--ink)}
+.evrow .nm2{font-family:var(--body);font-size:12.5px;color:var(--ink2)}
+.evnote{margin-top:8px;font-size:11.5px;color:var(--dim);line-height:1.5}
+.evnote b{color:var(--ink2)}
+
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.ch-grid{stroke:#1C2B50;stroke-width:1;vector-effect:non-scaling-stroke}
+.ch-y,.ch-x{fill:var(--dim);font-family:var(--mono);font-size:8px}
+.ch-y{text-anchor:end}.ch-x{text-anchor:middle}
+.ch-rev{fill:var(--green);opacity:.85}
+.ch-cost{fill:var(--red);opacity:.8}
+.ch-area{fill:var(--team);opacity:.14}
+.ch-brand{fill:none;stroke:var(--team);stroke-width:2;vector-effect:non-scaling-stroke}
+.ch-dot{fill:var(--team)}
+.ch-key{display:flex;flex-wrap:wrap;gap:12px;margin-top:7px;font-family:var(--mono);font-size:10px;color:var(--ink2)}
+.ch-key i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;border-radius:1px}
+.k-rev{background:var(--green)}.k-cost{background:var(--red)}.k-brand{background:var(--team)}
+.ch-note{color:var(--dim)}
+
+.realbox{display:flex;gap:10px;align-items:flex-start;margin:9px 0 0;padding:9px 11px;
+  background:#0A1228;border-left:2px solid var(--blue);border-radius:0 2px 2px 0;
+  font-size:12.5px;color:var(--ink2);line-height:1.55}
+.realbox .rl{flex:none;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--blue);
+  text-transform:uppercase;padding-top:2px}
+.realbox b{color:var(--ink)}
+
 /* ── save / load ── */
 .slots{display:flex;flex-direction:column;gap:8px}
 .slot{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;
@@ -1108,7 +1150,9 @@ function settleRace(){
     const payout=SEASON_PRIZE[myPos()-1]||9;
     S.cash+=payout; S.ledger.seasonPrize=payout; res.seasonPrize=payout;
   }
-  S.results.push({r:res.round,best:best<99?best:null,pts:res.gained,dnf:nDnf});
+  S.results.push({r:res.round,best:best<99?best:null,pts:res.gained,dnf:nDnf,
+    rev:+revenue.toFixed(1),cost:+(costs+dev).toFixed(1),net:+res.net.toFixed(1),
+    brand:+S.brand.toFixed(1),cash:+S.cash.toFixed(1)});
   S.lastResult=res;
   S.devRound=0;S.mkRound=0;S.mkList=[];S.practiceSpend=0;S.qMode="bal";S.grid=null;S.practiceDone=false;S.pendingTransfers=[];
   S.ev=null;S.evDone=false;S.mod=blankMod();
@@ -1221,7 +1265,8 @@ function devRow(key,koL,enL,val,cost,cls,mark){
     <div class="nm">${LANG==="en"?enL:koL}<em>${enL}</em></div>
     <div><div class="mrow"><span class="val">${val}</span>
       <span class="mc">${Bp("다음 +1","next +1")} = ${M(cost)}</span></div>
-      <div class="meter ${cls}"><span style="width:${val}%"></span>${mark!=null?`<i style="left:${mark}%"></i>`:""}</div></div>
+      <div class="meter ${cls}"><span style="width:${val}%"></span>${mark!=null?`<i style="left:${mark}%"></i>`:""}</div>
+      ${sparkMC(key)}</div>
     <div class="buys">
       <button class="b" data-buy="${key}" data-n="1" ${ok?"":"disabled"}>+1</button>
       <button class="b" data-buy="${key}" data-n="5" ${ok?"":"disabled"}>+5</button></div></div>`;
@@ -1258,14 +1303,37 @@ function renderPaddock(){
       <div class="l"><span class="k">${Bi("남은 라운드 회수 예상","Payback over remaining rounds")}</span>
         <span class="${estPayback()>=mkCost?"pos":"neg"}">${M(estPayback())}</span></div></div></div></div>`;
 
+  const est=estOutcome(), bm=brandMult();
+  const evOf=x=>x.id==="safe"?x.base*bm
+             :x.id==="perf"?(x.base+est.podium*x.bonus)*bm
+             :(est.win*x.bonus)*bm;
+  const avail=SPONSORS.filter(x=>!(x.brandNeed&&S.brand<x.brandNeed));
+  const bestEV=Math.max(...avail.map(evOf));
   const spon=`<div class="card"><div class="hd"><h2>${B("스폰서 계약","SPONSOR DEAL")}</h2>
     <span class="tag">${Bp("라운드마다 재선택","re-pick each round")}</span></div><div class="bd"><div class="opts">
     ${SPONSORS.map(s=>{
       const locked=s.brandNeed&&S.brand<s.brandNeed;
-      const pay=s.bonus?`${M(s.base*brandMult())} + ${M(s.bonus*brandMult())}`:`${M(s.base*brandMult())}`;
+      const pay=s.bonus?`${M(s.base*bm)} + ${M(s.bonus*bm)}`:`${M(s.base*bm)}`;
       return `<button class="opt ${S.sponsor===s.id?"sel":""}" data-sp="${s.id}" ${locked?"disabled":""}>
         <div class="t">${LANG==="en"?s.t[1]:s.t[0]}<span class="pay">${locked?Bp("브랜드 60 필요","needs brand 60"):pay}</span></div>
         <div class="d">${LANG==="ko"?s.d[0]:LANG==="en"?s.d[1]:s.d[0]+`<span class="en2">${s.d[1]}</span>`}</div></button>`;}).join("")}
+    </div>
+    <div class="evbox">
+      <div class="eh2"><span class="t2">${Bp("기대값 계산","Expected value")}</span>
+        <span class="p2">${Bp("네 차 기준 추정","estimated from your car")} · ${Bp("포디움","podium")} ${pct(est.podium)} · ${Bp("우승","win")} ${pct(est.win)}</span></div>
+      ${SPONSORS.map(x=>{
+        const locked=x.brandNeed&&S.brand<x.brandNeed;
+        if(locked)return "";
+        const ev=evOf(x);
+        const calc=x.id==="safe"?`${M(x.base)} × ${bm.toFixed(2)}`
+          :x.id==="perf"?`(${M(x.base)} + ${pct(est.podium)} × ${M(x.bonus)}) × ${bm.toFixed(2)}`
+          :`${pct(est.win)} × ${M(x.bonus)} × ${bm.toFixed(2)}`;
+        return `<div class="evrow ${Math.abs(ev-bestEV)<0.01?"best":""}">
+          <span><span class="nm2">${LANG==="en"?x.t[1]:x.t[0]}</span><br><span class="calc">${calc}</span></span>
+          <span class="val2">${M(ev)}</span></div>`;}).join("")}
+      <p class="evnote">${Bp(
+        "확률 × 보상을 곱한 값이 <b>기대값</b>이다. 여러 번 반복하면 평균적으로 이만큼 받는다는 뜻이지, 이번 한 번에 그렇게 받는다는 뜻이 아니다. 현금이 빠듯하면 기대값이 조금 낮아도 <b>확정</b>을 고르는 게 맞을 때가 있다.",
+        "Probability × payoff is the <b>expected value</b> - what you'd average over many repeats, not what you get this once. When cash is tight, taking the <b>guaranteed</b> option can be right even at a slightly lower expected value.")}</p>
     </div></div></div>`;
 
   const strat=`<div class="card"><div class="hd"><h2>${B("레이스 전략","RACE STRATEGY")}</h2>
@@ -1855,6 +1923,17 @@ function renderFinish(){
        <span class="pill">${Bp("리타이어","DNF")} ${dnfN}</span></div>
      <p style="margin:0">${bi(verdict)}</p></div></div>
 
+   ${S.results.length>1?`<div class="card"><div class="hd"><h2>${B("시즌 흐름","HOW THE SEASON WENT")}</h2>
+     <span class="tag">${Bp("라운드별","by round")}</span></div><div class="bd">
+     <h3 style="margin-bottom:4px">${Bi("라운드마다 번 돈과 쓴 돈","Money in vs money out, each round")}</h3>
+     ${seasonChart()}
+     <h3 style="margin:16px 0 4px">${Bi("브랜드 지수 변화","Brand index over the season")}</h3>
+     ${brandChart()}
+     <p class="fine" style="margin:11px 0 0">${Bp(
+       "초록 막대가 빨간 막대보다 낮은 라운드는 <b>그 주에 손해를 봤다</b>는 뜻이다. 개발비를 크게 쓴 라운드는 대부분 그렇게 보이지만, 그 투자가 이후 초록 막대를 키웠다면 옳은 선택이었다. <b>한 라운드가 아니라 흐름으로 봐야 한다.</b>",
+       "Where the green bar is shorter than the red one, <b>you lost money that weekend</b>. Big R&D rounds usually look like that - but if the investment grew the green bars afterwards, it was the right call. <b>Judge the trend, not a single round.</b>")}</p>
+   </div></div>`:""}
+
    <div class="card"><div class="hd"><h2>${B("시즌 손익계산서","SEASON INCOME STATEMENT")}</h2></div><div class="bd pl">
      <div class="l sum" style="margin-top:0;border-top:0;padding-top:0"><span class="k">${Bi("매출","Revenue")}</span><span class="pos">${M(rev)}</span></div>
      <div class="l ind"><span class="k">${Bi("레이스 상금","Race prize money")}</span><span>${M(L.prize)}</span></div>
@@ -1881,7 +1960,10 @@ function renderFinish(){
      <div class="l sum"><span class="k">${Bi("순이익","Net profit")}</span>
        <span class="${net>=0?"pos":"neg"}">${net>=0?"+":""}${M(net)}</span></div>
      <div class="l" style="border:0;padding-top:8px"><span class="k">${Bi("시작 현금 + 순이익 + 조달 = 최종 현금","Start cash + net profit + financing = final cash")}</span>
-       <span>${M(S.cash)}</span></div></div></div>
+       <span>${M(S.cash)}</span></div>
+     ${real("F1 팀도 이런 손익계산서를 매년 공개한다. 2023년 맥라렌은 매출 약 <b>£4억</b>에 순손실을 기록했고, 페라리·메르세데스만 꾸준히 흑자를 낸다. <b>이기는 것과 돈을 버는 것은 다른 문제</b>다.",
+             "Real F1 teams publish accounts like this. McLaren reported around <b>£400M</b> of revenue in 2023 and still made a loss; only a few teams are consistently profitable. <b>Winning and making money are different problems.</b>")}
+     </div></div>
 
    <div class="card"><div class="hd"><h2>${B("팀 대표 평가","REPORT CARD")}</h2></div><div class="bd">
      ${notes.map(n=>`<p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.62">${bi(n)}</p>`).join("")}</div></div>
@@ -1993,6 +2075,8 @@ function renderManual(){
        ["리타이어 1대당 <b>$1.6M</b>의 수리비. 연습 셋업 프로그램은 <b>$1.2M</b>. 둘 다 활동량에 따라 발생하므로 변동비다.",
         "Each retirement costs <b>$1.6M</b> in repairs. A practice setup programme costs <b>$1.2M</b>. Both scale with activity, so both are variable."])}
    </div>
+   ${real("비용 상한 <b>$135M</b>은 실제 규정이다. 2021년 도입됐고 <b>드라이버 연봉과 마케팅비는 상한에서 제외</b>된다 — 이 게임과 같다. 2021년 레드불이 상한을 약 $200만 넘겨 벌금 <b>$700만</b>과 풍동 사용시간 10% 삭감 처분을 받았다.",
+           "The <b>$135M</b> cost cap is real. It arrived for 2021, and <b>driver salaries and marketing sit outside it</b> - exactly as in this game. In 2021 Red Bull went over by about $2M and was fined <b>$7M</b> plus a 10% cut to its wind-tunnel time.")}
    <p style="margin-top:10px">${bi([
      "<b>왜 이 구분이 중요한가:</b> 고정비가 큰 팀(APEX $21.5M/라운드)은 성적이 나빠도 그 돈이 계속 나가서 순식간에 무너진다. 고정비가 작은 팀(HALCYON $3.2M)은 적게 벌어도 버틴다. 같은 실수를 해도 <b>결과가 완전히 다르다.</b>",
      "<b>Why the distinction matters:</b> a team with high fixed costs (APEX at $21.5M per round) keeps paying that money even when results collapse, so it fails fast. A team with low fixed costs (HALCYON at $3.2M) survives on very little. The same mistake produces <b>completely different outcomes.</b>"])}</p>`)+
@@ -2009,7 +2093,9 @@ function renderManual(){
    sec("브랜드와 마케팅 채널","Brand and marketing channels",`
      <p>${bi(["브랜드 지수는 스폰서 수익과 머천다이즈 수익을 <b>곱으로</b> 키운다. 매 라운드 0.7씩 자연 감소하고, 포디움에 오르면 저절로 오른다. 채널마다 성격이 다르다:",
        "Your brand index <b>multiplies</b> sponsorship and merchandise income. It decays 0.7 per round on its own and rises when you reach the podium. Each channel behaves differently:"])}</p>
-     <div class="mgrid">${CHANNELS.map(c=>item(c.t,`$${c.cost}M`,c.d)).join("")}</div>`)+
+     <div class="mgrid">${CHANNELS.map(c=>item(c.t,`$${c.cost}M`,c.d)).join("")}</div>
+     ${real("넷플릭스 <b>「Drive to Survive」</b>가 실제로 이 일을 했다. 2019년 방영 뒤 미국 F1 팬이 크게 늘었고, 성적이 나쁜 팀들이 오히려 인지도를 얻어 스폰서를 구했다. <b>성적이 아니라 이야기가 팔린 것</b>이다.",
+           "Netflix's <b>Drive to Survive</b> did exactly this. After 2019 the American audience grew sharply, and even backmarker teams won recognition and sponsors from it. <b>What sold was the story, not the results.</b>")}`)+
 
    sec("드라이버 — 비용이자 자산","Drivers - a cost and an asset",`<p>${bi([
      "1군 2명이 출전하고 <b>둘 다 점수를 딴다</b>. 실력(Skill)은 페이스에 직접 반영되고, 안정성(Consistency)은 랩타임의 흔들림을 줄인다. 컨디션은 주말마다 달라진다.",
@@ -2030,7 +2116,9 @@ function renderManual(){
      </div>
      <p style="margin-top:10px">${bi([
        "<b>가장 중요한 점:</b> 얼마에 샀든 <b>매각가는 지금의 시장가치로만</b> 정해진다. 비싸게 산 선수가 부진해도 그 돈은 돌아오지 않는다 — 이미 쓴 돈은 <b>매몰비용</b>이고, 계속 쓸지 말지는 <b>남은 가치</b>만 보고 정해야 한다.",
-       "<b>The key point:</b> what you paid has <b>no effect</b> on what you can sell for - only current market value matters. If an expensive signing underperforms, that money is gone. It is a <b>sunk cost</b>, and whether to keep him depends only on his <b>value from here on</b>."])}</p>`)+
+       "<b>The key point:</b> what you paid has <b>no effect</b> on what you can sell for - only current market value matters. If an expensive signing underperforms, that money is gone. It is a <b>sunk cost</b>, and whether to keep him depends only on his <b>value from here on</b>."])}</p>
+     ${real("실제로도 드라이버 연봉은 <b>비용 상한에서 제외</b>된다. 그래서 상위 팀은 스타에게 연 <b>$5,000만</b> 이상을 쓰면서도 차 개발비를 줄이지 않는다. 대신 팀 재정에는 그대로 부담으로 남는다.",
+           "Driver salaries really are <b>excluded from the cost cap</b>. That is how a top team can pay a star over <b>$50M a year</b> without cutting the car's development budget - though it still weighs on the team's finances.")}`)+
 
    sec("커리어 — 여러 시즌 이어하기","Career - playing multiple seasons",`<p>${bi([
      "한 시즌은 10라운드지만 <b>커리어는 계속된다.</b> 시즌이 끝나고 파산하지 않았다면 다음 시즌으로 이어갈 수 있다.",
@@ -2054,7 +2142,9 @@ function renderManual(){
      ${item(["파산 = 커리어 종료","Bankruptcy ends it"],Bp("이어할 수 없다","no continuing"),
        ["시즌 말 순자산이 마이너스면 팀은 문을 닫고 <b>커리어가 끝난다.</b> 성적이 아무리 좋아도 소용없다 — 이 게임에서 가장 단단한 규칙이다.",
         "If net worth is negative at season end the team folds and <b>the career is over.</b> No amount of results saves it - the hardest rule in the game."])}
-     </div>`)+
+     </div>
+     ${real("풍동 사용시간 차등 배분(ATR)은 진짜 규정이다. 전년도 <b>1위 팀은 기준의 70%</b>만, <b>꼴찌 팀은 115%</b>를 쓸 수 있다. 앞선 팀을 일부러 붙잡아 경쟁을 유지하는 장치 — 다른 스포츠 리그의 드래프트 제도와 같은 발상이다.",
+           "The sliding scale of wind-tunnel time (ATR) is a real rule. The team that finished <b>1st gets only 70%</b> of the baseline testing allowance while the <b>last-placed team gets 115%</b>. It deliberately holds the leaders back to keep the racing close - the same idea as a draft in other sports leagues.")}`)+
 
    sec("저장하기","Saving your game",`<p>${bi([
      "위쪽 <b>💾 저장</b> 버튼을 누르면 저장 창이 열린다.",
@@ -2073,7 +2163,9 @@ function renderManual(){
 
    sec("점수 체계","Scoring",`<p>${bi([
      "실제 F1 규정과 같다. 1위부터 <b>25 · 18 · 15 · 12 · 10 · 8 · 6 · 4 · 2 · 1</b>점, 10위까지. 패스티스트랩을 기록하고 10위 안에 들면 <b>+1점</b>. 컨스트럭터 점수는 두 드라이버의 합계다.",
-     "Same as real F1: <b>25, 18, 15, 12, 10, 8, 6, 4, 2, 1</b> points for the top ten. The fastest lap adds <b>+1</b> if that driver finishes in the top ten. Constructors' points are the sum of both drivers."])}</p>`)+
+     "Same as real F1: <b>25, 18, 15, 12, 10, 8, 6, 4, 2, 1</b> points for the top ten. The fastest lap adds <b>+1</b> if that driver finishes in the top ten. Constructors' points are the sum of both drivers."])}</p>
+     ${real("2010년부터 쓰는 실제 배점이다. 패스티스트랩 <b>+1점</b>은 2019~2024년에 시행되다가 2025년에 폐지됐다 — 하위권 팀이 순위를 포기하고 막판에 타이어만 갈아 1점을 노리는 일이 잦아서였다. <b>규칙이 바뀌면 사람의 행동도 바뀐다.</b>",
+           "These are the real points, used since 2010. The fastest-lap <b>+1</b> ran from 2019 to 2024 and was then dropped - backmarkers were giving up track position to pit late for a single point. <b>Change the rule and behaviour changes with it.</b>")}`)+
 
    sec("경제 개념 10가지","The ten economic concepts",
      `<div class="mgrid">${Object.values(CONCEPTS).map(c=>
@@ -2247,6 +2339,115 @@ function renderSave(){
        </div>
      </div>
    </div>`;
+}
+</script>
+<script>
+/* ═════════ 학습 보조 ═════════ */
+
+/* ── 결과 확률 추정 (몬테카를로) ──
+   실제 주말 시뮬레이션과 같은 식으로 여러 번 돌려 확률을 낸다.
+   퀄리파잉 그리드 효과는 작아서 생략한 근사치다. */
+let _estCache=null;
+function estimateOutcome(sims){
+  sims=sims||300;
+  const st=stratOf(), base=carPerf();
+  const mine=S.seats.map(d=>base+0.20*d.s*(d.cond||1)+st.pace);
+  const riv=[];
+  S.rivals.forEach(r=>r.d.forEach(d=>riv.push({cp:r.cp,s:d.s})));
+  const dnfP=(100-effRel())/100*0.30*st.risk;
+  /* 피트 타이밍·세이프티카 등 레이스 중 사건을 반영한 추가 변동폭.
+     실제 랩 시뮬 140회와 대조해 ±3.5로 보정했다. */
+  const INC=3.5, nz=m=>(Math.random()*2-1)*m;
+  let podium=0,win=0,inPts=0,sumPts=0;
+  for(let n=0;n<sims;n++){
+    const f=[];
+    mine.forEach(p=>f.push({me:1,dnf:Math.random()<dnfP,
+      v:p+nz(3)+nz(2)+nz(INC)}));
+    riv.forEach(r=>f.push({me:0,dnf:Math.random()<0.036,
+      v:r.cp+0.20*r.s*(0.92+Math.random()*0.16)+nz(3)+nz(2)+nz(INC)}));
+    f.sort((a,b)=>(a.dnf-b.dnf)||(b.v-a.v));
+    let best=99,got=0;
+    f.forEach((c,i)=>{if(c.me&&!c.dnf){best=Math.min(best,i+1);got+=(PTS[i]||0);}});
+    if(best===1)win++;
+    if(best<=3)podium++;
+    if(best<=10)inPts++;
+    sumPts+=got;
+  }
+  return{podium:podium/sims,win:win/sims,points:inPts/sims,avgPts:sumPts/sims};
+}
+function estOutcome(){
+  const key=[S.round,S.a,S.p,S.rel,S.strat,S.seats.map(d=>d.s+"_"+(d.cond||1).toFixed(2)).join(","),
+             S.rivals.map(r=>r.cp.toFixed(1)).join(",")].join("|");
+  if(!_estCache||_estCache.key!==key)_estCache={key,val:estimateOutcome()};
+  return _estCache.val;
+}
+const pct=x=>(x*100).toFixed(0)+"%";
+
+/* ── 미니 차트 ── */
+function sparkMC(kind){          // 한계비용 곡선
+  const cur=kind==="r"?S.rel:kind==="a"?S.a:S.p;
+  const f=kind==="r"?mcR:kind==="a"?mcA:mcP;
+  const from=Math.max(30,cur-8), to=Math.min(100,cur+22);
+  const pts=[]; let max=0;
+  for(let v=from;v<=to;v++){const c=f(v);max=Math.max(max,c);pts.push([v,c]);}
+  const W=100,H=26;
+  const x=v=>((v-from)/(to-from))*W;
+  const y=c=>H-2-(c/max)*(H-5);
+  const d=pts.map((p,i)=>(i?"L":"M")+x(p[0]).toFixed(1)+" "+y(p[1]).toFixed(1)).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <path class="sp-line" d="${d}"/>
+    <line class="sp-now" x1="${x(cur).toFixed(1)}" y1="2" x2="${x(cur).toFixed(1)}" y2="${H-2}"/>
+    <circle class="sp-dot" cx="${x(cur).toFixed(1)}" cy="${y(f(cur)).toFixed(1)}" r="2.2"/></svg>`;
+}
+
+function seasonChart(){          // 라운드별 수익 vs 비용
+  const rs=S.results.filter(r=>r.rev!==undefined);
+  if(rs.length<2)return "";
+  const W=520,H=132,PADL=34,PADB=18,PADT=8;
+  const max=Math.max(...rs.map(r=>Math.max(r.rev,r.cost)))*1.12;
+  const bw=(W-PADL-6)/rs.length;
+  const y=v=>PADT+(H-PADT-PADB)*(1-v/max);
+  const bars=rs.map((r,i)=>{
+    const x0=PADL+i*bw;
+    const w=bw*0.36;
+    return `<rect class="ch-rev" x="${(x0+bw*0.10).toFixed(1)}" y="${y(r.rev).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-PADB-y(r.rev)).toFixed(1)}"/>
+            <rect class="ch-cost" x="${(x0+bw*0.52).toFixed(1)}" y="${y(r.cost).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-PADB-y(r.cost)).toFixed(1)}"/>
+            <text class="ch-x" x="${(x0+bw/2).toFixed(1)}" y="${H-5}">${r.r}</text>`;}).join("");
+  const grid=[0,0.5,1].map(f=>{const v=max*f;
+    return `<line class="ch-grid" x1="${PADL}" y1="${y(v).toFixed(1)}" x2="${W-4}" y2="${y(v).toFixed(1)}"/>
+            <text class="ch-y" x="${PADL-5}" y="${(y(v)+3).toFixed(1)}">${v.toFixed(0)}</text>`;}).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">${grid}${bars}</svg>
+    <div class="ch-key">
+      <span><i class="k-rev"></i>${Bp("라운드 수익","Revenue")}</span>
+      <span><i class="k-cost"></i>${Bp("라운드 비용","Costs")}</span>
+      <span class="ch-note">${Bp("막대가 뒤집히는 라운드가 돈이 새는 지점이다","Where the bars flip is where money leaks")}</span>
+    </div>`;
+}
+
+function brandChart(){           // 브랜드 추이
+  const rs=S.results.filter(r=>r.brand!==undefined);
+  if(rs.length<2)return "";
+  const W=520,H=92,PADL=34,PADB=16,PADT=8;
+  const max=Math.max(60,...rs.map(r=>r.brand))*1.08;
+  const x=i=>PADL+(W-PADL-8)*(i/(rs.length-1||1));
+  const y=v=>PADT+(H-PADT-PADB)*(1-v/max);
+  const d=rs.map((r,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(r.brand).toFixed(1)).join(" ");
+  const area=d+` L${x(rs.length-1).toFixed(1)} ${H-PADB} L${x(0).toFixed(1)} ${H-PADB} Z`;
+  const dots=rs.map((r,i)=>`<circle class="ch-dot" cx="${x(i).toFixed(1)}" cy="${y(r.brand).toFixed(1)}" r="2"/>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">
+      <line class="ch-grid" x1="${PADL}" y1="${y(max).toFixed(1)}" x2="${W-4}" y2="${y(max).toFixed(1)}"/>
+      <text class="ch-y" x="${PADL-5}" y="${(y(max)+3).toFixed(1)}">${max.toFixed(0)}</text>
+      <line class="ch-grid" x1="${PADL}" y1="${(H-PADB).toFixed(1)}" x2="${W-4}" y2="${(H-PADB).toFixed(1)}"/>
+      <text class="ch-y" x="${PADL-5}" y="${(H-PADB+3).toFixed(1)}">0</text>
+      <path class="ch-area" d="${area}"/><path class="ch-brand" d="${d}"/>${dots}</svg>
+    <div class="ch-key"><span><i class="k-brand"></i>${Bp("브랜드 지수","Brand index")}</span>
+      <span class="ch-note">${Bp("마케팅을 멈추면 곧바로 내려간다","Stop marketing and it falls straight away")}</span></div>`;
+}
+
+/* ── 실제 F1 대조 배지 ── */
+function real(ko,en){
+  return `<div class="realbox"><span class="rl">${Bp("실제 F1","REAL F1")}</span>
+    <span>${LANG==="ko"?ko:LANG==="en"?en:ko+`<span class="en2">${en}</span>`}</span></div>`;
 }
 </script>
 <script>
