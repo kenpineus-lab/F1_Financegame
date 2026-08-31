@@ -463,6 +463,21 @@ input.tn{background:#0A1228;border:1px solid var(--line);color:var(--ink);font-f
   text-transform:uppercase;padding-top:2px}
 .realbox b{color:var(--ink)}
 
+/* ── players ── */
+.pl-row{display:grid;grid-template-columns:38px 1fr auto;gap:11px;align-items:center;
+  background:#0A1228;border:1px solid var(--line);border-radius:2px;padding:9px 12px}
+.pl-row.on{border-color:var(--team);background:linear-gradient(90deg,#170D26,#0A1228)}
+.pl-av{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;
+  background:var(--team);color:#fff;font-family:var(--disp);font-weight:800;font-size:13px}
+.pl-nm{font-family:var(--disp);font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+.pl-cur{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--team);text-transform:uppercase}
+.pl-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+.pl-add{display:flex;gap:7px;margin-top:9px}
+.pl-in{flex:1;background:#070C1C;border:1px solid var(--line);border-radius:2px;color:var(--ink);
+  font-family:var(--body);font-size:13.5px;padding:8px 11px}
+.pl-in:focus-visible{outline:2px solid var(--team);outline-offset:2px}
+@media(max-width:640px){.pl-row{grid-template-columns:32px 1fr}.pl-row .sl-acts{grid-column:1/-1;justify-content:flex-start}}
+
 /* ── save / load ── */
 .slots{display:flex;flex-direction:column;gap:8px}
 .slot{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;
@@ -860,10 +875,60 @@ const $=id=>document.getElementById(id);
 <script>
 /* ═════════ 상태 ═════════ */
 let S=null, picked=null, RACE=null;
-const KEY="pitwallgp.v3";
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
-const loadS=()=>{try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;}};
-const wipe=()=>{try{localStorage.removeItem(KEY);}catch(e){}};
+/* ── 플레이어별 저장 공간 ──
+   같은 기기·같은 브라우저를 여러 사람이 써도 서로 덮어쓰지 않도록
+   모든 저장 키 앞에 플레이어 이름을 붙인다. */
+const PLIST="pitwallgp.players", PCUR="pitwallgp.current";
+const slug=n=>String(n).trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g,"-").slice(0,16)||"p";
+function players(){
+  try{const r=localStorage.getItem(PLIST);const a=r?JSON.parse(r):null;
+      return Array.isArray(a)&&a.length?a:null;}catch(e){return null;}
+}
+function setPlayers(a){try{localStorage.setItem(PLIST,JSON.stringify(a));}catch(e){}}
+function curPlayer(){
+  try{const c=localStorage.getItem(PCUR); const a=players();
+      if(c&&a&&a.indexOf(c)>=0)return c;
+      return a?a[0]:null;}catch(e){return null;}
+}
+function setCurPlayer(n){try{localStorage.setItem(PCUR,n);}catch(e){}}
+function addPlayer(n){
+  const a=players()||[]; n=String(n).trim().slice(0,14);
+  if(!n||a.indexOf(n)>=0)return false;
+  if(a.length>=6)return false;
+  a.push(n); setPlayers(a); return true;
+}
+function removePlayer(n){
+  const a=players()||[]; const i=a.indexOf(n); if(i<0)return;
+  // 그 플레이어의 저장본을 모두 지운다
+  const pre="pitwallgp."+slug(n)+".";
+  try{Object.keys(localStorage).filter(k=>k.indexOf(pre)===0).forEach(k=>localStorage.removeItem(k));}catch(e){}
+  a.splice(i,1); setPlayers(a);
+  if(curPlayer()===n)setCurPlayer(a[0]||"");
+}
+const ns=()=>"pitwallgp."+slug(curPlayer()||"p")+".";
+const AKEY=()=>ns()+"v3";
+
+/* 예전(플레이어 구분 없던) 저장본을 첫 플레이어에게 옮긴다 */
+function migrateLegacy(){
+  try{
+    if(players())return;
+    const legacy=localStorage.getItem("pitwallgp.v3");
+    const name=legacy?"PLAYER 1":null;
+    if(!legacy)return;
+    setPlayers([name]); setCurPlayer(name);
+    localStorage.setItem("pitwallgp."+slug(name)+".v3",legacy);
+    localStorage.removeItem("pitwallgp.v3");
+    [1,2,3].forEach(i=>{
+      const v=localStorage.getItem("pitwallgp.slot"+i);
+      if(v){localStorage.setItem("pitwallgp."+slug(name)+".slot"+i,v);
+            localStorage.removeItem("pitwallgp.slot"+i);}
+    });
+  }catch(e){}
+}
+
+const save=()=>{try{if(curPlayer())localStorage.setItem(AKEY(),JSON.stringify(S));}catch(e){}};
+const loadS=()=>{try{if(!curPlayer())return null;const r=localStorage.getItem(AKEY());return r?JSON.parse(r):null;}catch(e){return null;}};
+const wipe=()=>{try{localStorage.removeItem(AKEY());}catch(e){}};
 
 function newState(tk,name){
   const T=TEAMS[tk];
@@ -2222,7 +2287,7 @@ function renderManual(){
 <script>
 /* ═════════ 저장 · 불러오기 ═════════ */
 const SLOTS=[1,2,3];
-const slotKey=n=>"pitwallgp.slot"+n;
+const slotKey=n=>ns()+"slot"+n;
 
 function readSlot(n){
   try{const r=localStorage.getItem(slotKey(n));return r?JSON.parse(r):null;}catch(e){return null;}
@@ -2329,7 +2394,7 @@ function renderSave(){
   $("saveHd").innerHTML=Bp("저장 · 불러오기","Save & Load");
   $("closeSave").innerHTML=Bp("닫기","Close");
 
-  const auto=(()=>{try{const r=localStorage.getItem(KEY);return r?{state:JSON.parse(r),when:Bp("계속 갱신됨","continuously updated")}:null;}catch(e){return null;}})();
+  const auto=(()=>{try{const r=localStorage.getItem(AKEY());return r?{state:JSON.parse(r),when:Bp("계속 갱신됨","continuously updated")}:null;}catch(e){return null;}})();
   const autoI=auto?slotInfo(auto):null;
 
   const row=(label,info,n)=>{
@@ -2337,7 +2402,7 @@ function renderSave(){
     const meta=filled
       ? `<div class="sl-meta">
            <span class="lv" style="background:${info.col}"></span><b>${info.name}</b>
-           <span class="sl-sub">${Bp("시즌","S")}${info.season} · R${info.round} · P${info.pos} · ${info.pts}pts · ${M(info.cash)}${info.debt>0?" / "+Bp("부채","debt")+" "+M(info.debt):""}</span>
+           <span class="sl-sub">S${info.season} · R${info.round} · P${info.pos} · ${info.pts}pts · ${M(info.cash)}${info.debt>0?" / "+Bp("부채","debt")+" "+M(info.debt):""}</span>
            <span class="sl-when">${info.when}${info.seasons?` · ${Bp("완주 시즌","seasons")} ${info.seasons}${info.titles?" · 🏆"+info.titles:""}`:""}</span>
          </div>`
       : `<div class="sl-meta"><span class="sl-empty">${Bp("비어 있음","Empty")}</span></div>`;
@@ -2350,7 +2415,35 @@ function renderSave(){
       <div class="sl-name">${label}</div>${meta}<div class="sl-acts">${acts}</div></div>`;
   };
 
+  const list=players()||[], cur=curPlayer();
+  const pRow=n=>{
+    const on=n===cur;
+    let info=null;
+    try{const r=localStorage.getItem("pitwallgp."+slug(n)+".v3");
+        if(r)info=slotInfo({state:JSON.parse(r),when:""});}catch(e){}
+    return `<div class="pl-row ${on?"on":""}">
+      <div class="pl-av" style="${on?"":"opacity:.5"}">${n.slice(0,2).toUpperCase()}</div>
+      <div class="pl-meta"><div class="pl-nm">${n}${on?` <span class="pl-cur">${Bp("플레이 중","playing")}</span>`:""}</div>
+        <div class="pl-sub">${info?`${info.team} · S${info.season} R${info.round} · ${info.pts}pts · ${M(info.cash)}`
+          :Bp("아직 시작 안 함","not started yet")}</div></div>
+      <div class="sl-acts">
+        ${on?"":`<button class="b" data-pl="use" data-n="${encodeURIComponent(n)}">${Bp("전환","Switch")}</button>`}
+        <button class="b" data-pl="del" data-n="${encodeURIComponent(n)}" ${list.length<=1?"disabled":""}>${Bp("삭제","Delete")}</button>
+      </div></div>`;
+  };
+
   $("saveBody").innerHTML=`
+   <div class="msec">
+     <h3>${Bp("플레이어","Players")}</h3>
+     <p style="margin-bottom:11px">${Bp(
+       "한 브라우저를 여러 사람이 써도 <b>저장이 서로 섞이지 않는다.</b> 각자 자기 이름으로 자동 저장과 슬롯 3개를 따로 갖는다.",
+       "Several people can share one browser without <b>their saves mixing.</b> Each name gets its own autosave and three slots.")}</p>
+     <div class="slots">${list.map(pRow).join("")}</div>
+     ${list.length<6?`<div class="pl-add">
+       <input id="newPlayer" class="pl-in" maxlength="14" placeholder="${Bp("새 플레이어 이름","New player name")}">
+       <button class="b" id="btnAddPlayer">${Bp("추가","Add")}</button></div>`:""}
+   </div>
+
    <div class="msec">
      <h3>${Bp("이 브라우저에 저장","Saved in this browser")}</h3>
      <p style="margin-bottom:11px">${Bp(
@@ -2717,6 +2810,39 @@ document.addEventListener("click",e=>{
 
   // 설명서
   if(t.closest("#openSave")){openSave();return;}
+  const pl=t.closest("[data-pl]");
+  if(pl&&!pl.disabled){
+    const act=pl.dataset.pl, nm=decodeURIComponent(pl.dataset.n);
+    if(act==="use"){
+      if(S&&!confirm(Bd(`${nm}(으)로 전환한다.\n\n지금 진행 중인 게임은 네 이름으로 자동 저장돼 있으니 언제든 돌아올 수 있다.`,
+                        `Switching to ${nm}.\n\nYour current game stays autosaved under your own name, so you can come back to it.`)))return;
+      if(S)save();
+      setCurPlayer(nm);
+      const r=loadS();
+      if(r&&adoptState(r)){toast(Bp(nm+" 게임을 불러왔다.",nm+"'s game loaded."));}
+      else{S=null;picked=null;RACE=null;
+           document.documentElement.style.setProperty("--team","#E3002B");
+           document.documentElement.style.setProperty("--team2","#FFC500");
+           $("game").classList.add("hide");$("select").classList.remove("hide");
+           $("start").disabled=true;$("tname").value="";renderSelect();
+           toast(Bp(nm+" — 새로 시작하자.",nm+" - start a new career."));}
+      closeSave();renderPlayerChip();return;}
+    if(act==="del"){
+      if(!confirm(Bd(`${nm}의 저장본을 모두 지운다.\n\n자동 저장과 슬롯 3개가 사라진다. 되돌릴 수 없다.`,
+                     `Delete everything saved under ${nm}.\n\nThe autosave and all three slots go. This cannot be undone.`)))return;
+      const wasCur=curPlayer()===nm;
+      removePlayer(nm);
+      if(wasCur){S=null;picked=null;RACE=null;
+        $("game").classList.add("hide");$("select").classList.remove("hide");
+        $("start").disabled=true;renderSelect();
+        const r=loadS(); if(r)adoptState(r);}
+      renderSave();renderPlayerChip();toast(Bp(nm+" 삭제했다.",nm+" deleted."));return;}
+  }
+  if(t.closest("#btnAddPlayer")){
+    const v=$("newPlayer").value.trim();
+    if(!v){toast(Bp("이름을 적어야 한다.","Type a name first."),true);return;}
+    if(!addPlayer(v)){toast(Bp("같은 이름이 있거나 자리가 없다.","That name exists, or there is no room."),true);return;}
+    renderSave();renderPlayerChip();toast(Bp(v+" 추가했다.",v+" added."));return;}
   if(t.closest("#closeSave")){closeSave();return;}
   const sl=t.closest("[data-sl]");
   if(sl&&!sl.disabled){
@@ -2734,7 +2860,7 @@ document.addEventListener("click",e=>{
       if(S&&!confirm(Bd(
         `지금 진행 중인 게임을 덮어쓴다.\n\n저장하지 않은 진행은 사라진다. 계속할까?`,
         `This replaces your current game.\n\nUnsaved progress will be lost. Continue?`)))return;
-      if(n===0){ const r=(()=>{try{const x=localStorage.getItem(KEY);return x?JSON.parse(x):null;}catch(e){return null;}})();
+      if(n===0){ const r=(()=>{try{const x=localStorage.getItem(AKEY());return x?JSON.parse(x):null;}catch(e){return null;}})();
         if(r&&adoptState(r)){closeSave();toast(Bp("자동 저장을 불러왔다.","Autosave loaded."));}
         else toast(Bp("불러올 수 없다.","Could not load."),true); }
       else loadFromSlot(n);
@@ -2919,6 +3045,15 @@ function restart(){
 }
 
 /* ═════════ 부팅 ═════════ */
+function renderPlayerChip(){
+  const b=$("openSave"); if(!b)return;
+  const n=curPlayer();
+  b.innerHTML=`💾 ${n?n:Bp("저장","Save")}`;
+  b.title=Bp("저장 · 불러오기 · 플레이어","Save, load and players");
+}
+migrateLegacy();
+if(!players()){ setPlayers(["PLAYER 1"]); setCurPlayer("PLAYER 1"); }
+renderPlayerChip();
 renderSelect();
 (function boot(){
   const s=loadS();
